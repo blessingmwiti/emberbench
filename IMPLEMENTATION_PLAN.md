@@ -36,7 +36,7 @@ A milestone is complete only when all of its exit criteria are satisfied.
 
 - [x] Choose the working product name: Emberbench.
 - [x] Write the product vision and architecture README.
-- [x] Add the MIT license.
+- [x] Add the Apache License 2.0.
 - [x] Define the primary value proposition: the fastest path from a web link to private, on-device AI.
 - [x] Establish local-first, honest compatibility, useful offline behavior, and progressive complexity as product principles.
 - [x] Define the primary MVP user persona.
