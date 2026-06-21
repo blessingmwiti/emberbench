@@ -170,4 +170,4 @@ An explicit runtime probe then downloaded the pinned SmolLM2 revision, initializ
 
 ## Next experiment
 
-Add equivalent cache lifecycle support to the vision runtime adapter.
+Add storage preflight checks before model downloads.
