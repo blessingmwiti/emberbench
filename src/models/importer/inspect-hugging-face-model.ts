@@ -10,15 +10,12 @@ export async function inspectHuggingFaceModel(
 ): Promise<CompatibilityReport> {
   const modelId = parseHuggingFaceModelInput(input);
   const encodedModelId = modelId.split('/').map(encodeURIComponent).join('/');
-  const response = await fetch(
-    `https://huggingface.co/api/models/${encodedModelId}?blobs=true`,
-    {
-      headers: {
-        Accept: 'application/json',
-      },
-      signal,
+  const response = await fetch(`https://huggingface.co/api/models/${encodedModelId}?blobs=true`, {
+    headers: {
+      Accept: 'application/json',
     },
-  );
+    signal,
+  });
 
   if (!response.ok) {
     if (response.status === 401 || response.status === 403 || response.status === 404) {

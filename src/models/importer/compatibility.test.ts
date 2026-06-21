@@ -24,12 +24,15 @@ describe('buildCompatibilityReport', () => {
       siblings: [
         ...(baseInfo.siblings ?? []),
         { rfilename: 'onnx/model_q4.onnx', size: 1_000 },
+        { rfilename: 'onnx/model_q4.onnx_data', size: 9_000 },
       ],
     });
 
     expect(report.outcome).toBe('ready');
     expect(report.files.quantizedOnnx).toBe(1);
     expect(report.pinnedRevision).toBe('abc123');
+    expect(report.recommendation?.dtype).toBe('q4');
+    expect(report.recommendation?.sizeBytes).toBe(10_000);
   });
 
   it('marks recognized architectures without ONNX as convertible', () => {

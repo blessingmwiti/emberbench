@@ -154,7 +154,9 @@ Live browser checks classified:
 - `Qwen/Qwen2.5-Coder-1.5B-Instruct` as conversion required because the source repository lacks ONNX artifacts.
 - A non-Hugging-Face URL as invalid without making a repository request.
 
-The result is metadata-based. A lightweight runtime initialization probe is still required before an imported model can be labeled fully verified.
+The inspector recommends a reduced-precision graph and includes matching external-data sidecars in its size estimate. For SmolLM2 Q4 this is approximately 173.7 MB rather than the misleading 268 KB graph-header size alone.
+
+An explicit runtime probe then downloaded the pinned SmolLM2 revision, initialized it through WebGPU in a disposable worker, released the model, and reported success in 46.38 seconds.
 
 ## Open feasibility risks
 
@@ -168,4 +170,4 @@ The result is metadata-based. A lightweight runtime initialization probe is stil
 
 ## Next experiment
 
-Add task-aware compatibility rules, recommended artifact selection, and runtime initialization probing.
+Create the curated model manifest schema and registry foundation.

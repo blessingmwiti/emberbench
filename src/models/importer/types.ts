@@ -38,6 +38,11 @@ export interface CompatibilityReport {
   outcome: CompatibilityOutcome;
   pipelineTag: string | null;
   pinnedRevision: string | null;
+  recommendation: {
+    dtype: DataType;
+    files: string[];
+    sizeBytes: number;
+  } | null;
   reasons: string[];
   sizes: {
     onnxBytes: number;
@@ -46,3 +51,4 @@ export interface CompatibilityReport {
   };
   sourceUrl: string;
 }
+import type { DataType } from '@huggingface/transformers';

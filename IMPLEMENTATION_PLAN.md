@@ -206,7 +206,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [x] Create the global layout.
 - [ ] Add routing.
 - [~] Add navigation for Home, Workspaces, Models, Downloads, and Settings.
-- [ ] Add a global error boundary.
+- [x] Add a global error boundary.
 - [ ] Add toast or notification infrastructure.
 - [ ] Add loading, empty, warning, and fatal-error patterns.
 - [x] Add responsive desktop and mobile layouts.
@@ -270,7 +270,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [ ] Add source repository and pinned revision fields.
 - [ ] Add model license fields.
 - [ ] Add task and workspace compatibility fields.
-- [ ] Add artifact size and precision fields.
+- [x] Add artifact size and precision fields to compatibility reports.
 - [ ] Add minimum/recommended device-tier fields.
 - [ ] Add model status: experimental, supported, or recommended.
 - [ ] Add the first tiny development model.
@@ -314,7 +314,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [ ] Define Basic, Standard, and Performance device tiers.
 - [ ] Define an Unsupported/Fallback state.
 - [ ] Map static model requirements to tiers.
-- [ ] Add a lightweight runtime probe.
+- [x] Add a lightweight opt-in runtime initialization probe.
 - [ ] Combine probe results with conservative model estimates.
 - [ ] Explain why a device received its tier.
 - [ ] Allow advanced users to override recommendations with a warning.
@@ -568,43 +568,43 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Input parsing and repository inspection
 
-- [ ] Accept `owner/model` identifiers.
-- [ ] Accept canonical Hugging Face model URLs.
-- [ ] Handle URLs containing revisions or file paths intentionally.
-- [ ] Normalize equivalent inputs.
-- [ ] Validate owner and repository-name syntax.
-- [ ] Fetch public model metadata.
-- [ ] Inspect repository files at a pinned revision.
-- [ ] Parse model configuration defensively.
-- [ ] Parse tokenizer and processor metadata defensively.
-- [ ] Never execute arbitrary repository code.
+- [x] Accept `owner/model` identifiers.
+- [x] Accept canonical Hugging Face model URLs.
+- [x] Handle URLs containing revisions or file paths intentionally.
+- [x] Normalize equivalent inputs.
+- [x] Validate owner and repository-name syntax.
+- [x] Fetch public model metadata.
+- [x] Inspect repository files and pin the reported revision.
+- [x] Parse model configuration defensively.
+- [x] Parse tokenizer and processor metadata defensively.
+- [x] Never execute arbitrary repository code.
 
 ### Compatibility rules
 
-- [ ] Create an allowlist of supported architectures.
-- [ ] Map architectures to runtime adapters.
-- [ ] Map model tasks to Emberbench capabilities.
-- [ ] Check for required ONNX graphs.
-- [ ] Check for tokenizer files.
-- [ ] Check for processor and preprocessing files.
-- [ ] Detect available quantizations and dtypes.
-- [ ] Detect unsupported custom code requirements.
+- [x] Create an initial allowlist of supported architectures.
+- [x] Map the initial architecture and tasks to the Transformers.js runtime adapter.
+- [x] Map model tasks to initial Emberbench capabilities.
+- [x] Check for required ONNX graphs.
+- [x] Check for tokenizer files.
+- [x] Check for processor and preprocessing files.
+- [x] Detect available quantizations and dtypes.
+- [x] Detect unsupported custom code requirements.
 - [ ] Detect unsupported operators or known runtime limitations.
-- [ ] Detect gated or private repositories.
-- [ ] Detect incomplete repositories.
+- [x] Detect gated or private repositories.
+- [x] Detect incomplete repositories.
 - [ ] Calculate total required download size.
 - [ ] Estimate device-tier and memory suitability.
-- [ ] Pin the inspected repository revision.
+- [x] Pin the inspected repository revision.
 
 ### Compatibility report
 
-- [ ] Implement `Ready to run`.
-- [ ] Implement `Conversion required`.
-- [ ] Implement `Unsupported`.
-- [ ] Include specific reasons and evidence.
-- [ ] Distinguish errors from genuine incompatibility.
-- [ ] Display required and optional artifacts.
-- [ ] Display compatible precision choices.
+- [x] Implement `Ready to run`.
+- [x] Implement `Conversion required`.
+- [x] Implement `Unsupported`.
+- [x] Include specific reasons and evidence.
+- [x] Distinguish errors from genuine incompatibility.
+- [x] Display recommended artifacts.
+- [x] Display compatible precision choices.
 - [ ] Display storage and device warnings.
 - [ ] Suggest curated alternatives when possible.
 - [ ] Link to source metadata and model license.
@@ -1096,4 +1096,4 @@ Ideas belong here until they are accepted into a chronological phase.
 
 ## Current next action
 
-- [ ] Add task-aware compatibility rules, recommended artifact selection, and runtime initialization probing.
+- [ ] Create the curated model manifest schema and registry foundation.

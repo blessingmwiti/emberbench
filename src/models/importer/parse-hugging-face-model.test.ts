@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  HuggingFaceModelInputError,
-  parseHuggingFaceModelInput,
-} from './parse-hugging-face-model';
+import { HuggingFaceModelInputError, parseHuggingFaceModelInput } from './parse-hugging-face-model';
 
 describe('parseHuggingFaceModelInput', () => {
   it('accepts owner/model identifiers', () => {

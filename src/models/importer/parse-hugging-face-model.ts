@@ -15,7 +15,9 @@ function validateModelId(owner: string, model: string) {
 export function parseHuggingFaceModelInput(input: string): string {
   const normalized = input.trim();
   if (!normalized) {
-    throw new HuggingFaceModelInputError('Enter a Hugging Face model URL or owner/model identifier.');
+    throw new HuggingFaceModelInputError(
+      'Enter a Hugging Face model URL or owner/model identifier.',
+    );
   }
 
   if (!normalized.includes('://')) {

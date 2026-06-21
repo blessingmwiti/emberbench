@@ -926,6 +926,10 @@ h2 {
   grid-template-columns: repeat(2, 1fr);
 }
 
+.compatibility-facts dd {
+  max-width: 260px;
+}
+
 .compatibility-facts div {
   padding: 14px 0;
   border-bottom: 1px solid var(--line);
@@ -974,6 +978,37 @@ h2 {
 .compatibility-report > a {
   color: var(--gold);
   font-size: 11px;
+}
+
+.runtime-probe {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.runtime-probe > p:first-child {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.runtime-probe .button {
+  margin-top: 12px;
+}
+
+.probe-message {
+  margin: 14px 0 0;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.probe-message--verified {
+  color: var(--green);
+}
+
+.probe-message--failed {
+  color: var(--ember-light);
 }
 
 .report-placeholder {
@@ -1046,6 +1081,41 @@ footer {
 footer span:first-child {
   color: var(--cream);
   font-weight: 700;
+}
+
+.fatal-error {
+  width: min(720px, calc(100% - 40px));
+  min-height: 100vh;
+  margin: 0 auto;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+}
+
+.fatal-error h1 {
+  margin: 12px 0 20px;
+  font-size: clamp(48px, 8vw, 88px);
+  letter-spacing: -0.06em;
+  line-height: 0.95;
+}
+
+.fatal-error > p:not(.kicker) {
+  max-width: 560px;
+  margin: 0 0 28px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.fatal-error details {
+  margin-top: 24px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.fatal-error code {
+  margin-top: 10px;
+  display: block;
+  color: var(--ember-light);
 }
 
 @keyframes pulse {
