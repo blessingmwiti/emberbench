@@ -1,6 +1,11 @@
 /// <reference lib="webworker" />
 
-import { InterruptableStoppingCriteria, pipeline, TextStreamer } from '@huggingface/transformers';
+import {
+  InterruptableStoppingCriteria,
+  ModelRegistry,
+  pipeline,
+  TextStreamer,
+} from '@huggingface/transformers';
 
 import {
   TEXT_SPIKE_MODEL,
@@ -10,27 +15,45 @@ import {
 
 const scope = self as DedicatedWorkerGlobalScope;
 const stoppingCriteria = new InterruptableStoppingCriteria();
+const originalFetch = scope.fetch.bind(scope);
+let blockRemoteModelRequests = false;
 
-async function createGenerator() {
+scope.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+  const url = input instanceof Request ? input.url : input instanceof URL ? input.href : input;
+
+  if (blockRemoteModelRequests && new URL(url, scope.location.href).hostname === 'huggingface.co') {
+    throw new Error('A Hugging Face request was blocked by cached-files-only mode.');
+  }
+
+  return originalFetch(input, init);
+};
+
+async function createGenerator(cachedFilesOnly = false) {
   const startedAt = performance.now();
-  const generator = await pipeline('text-generation', TEXT_SPIKE_MODEL, {
-    device: 'webgpu',
-    dtype: 'q4',
-    progress_callback: (data) => {
-      post({
-        data: data as unknown as Record<string, unknown>,
-        type: 'progress',
-      });
-    },
-  });
+  blockRemoteModelRequests = cachedFilesOnly;
 
-  post({
-    loadTimeMs: performance.now() - startedAt,
-    model: TEXT_SPIKE_MODEL,
-    type: 'ready',
-  });
+  try {
+    const generator = await pipeline('text-generation', TEXT_SPIKE_MODEL, {
+      device: 'webgpu',
+      dtype: 'q4',
+      progress_callback: (data) => {
+        post({
+          data: data as unknown as Record<string, unknown>,
+          type: 'progress',
+        });
+      },
+    });
 
-  return generator;
+    post({
+      loadTimeMs: performance.now() - startedAt,
+      model: TEXT_SPIKE_MODEL,
+      type: 'ready',
+    });
+
+    return generator;
+  } finally {
+    blockRemoteModelRequests = false;
+  }
 }
 
 type Generator = Awaited<ReturnType<typeof createGenerator>>;
@@ -44,7 +67,7 @@ function post(message: TextModelWorkerEvent) {
   scope.postMessage(message);
 }
 
-async function getGenerator() {
+async function getGenerator(cachedFilesOnly = false) {
   if (generator) {
     post({
       loadTimeMs: 0,
@@ -54,7 +77,7 @@ async function getGenerator() {
     return generator;
   }
 
-  generatorPromise ??= createGenerator();
+  generatorPromise ??= createGenerator(cachedFilesOnly);
 
   try {
     generator = await generatorPromise;
@@ -155,12 +178,20 @@ scope.addEventListener('message', (event: MessageEvent<TextModelWorkerRequest>) 
 
   switch (request.type) {
     case 'load':
-      void getGenerator().catch((error: unknown) => {
-        post({
-          message: error instanceof Error ? error.message : 'Model loading failed.',
-          type: 'error',
+      void ModelRegistry.is_pipeline_cached('text-generation', TEXT_SPIKE_MODEL, {
+        device: 'webgpu',
+        dtype: 'q4',
+      })
+        .then((cached) => {
+          post({ cached, type: 'cache-status' });
+          return getGenerator(request.cachedFilesOnly);
+        })
+        .catch((error: unknown) => {
+          post({
+            message: error instanceof Error ? error.message : 'Model loading failed.',
+            type: 'error',
+          });
         });
-      });
       break;
     case 'generate':
       void generate(request);

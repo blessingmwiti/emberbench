@@ -7,14 +7,16 @@ This is a living record of browser, device, model, storage, and offline feasibil
 - Report started: 2026-06-21
 - Phase: WebGPU capability and text-generation probe
 - Overall result: WebGPU initialization and worker-based text generation are feasible in the first tested Chromium environment.
-- Vision and fully offline feasibility remain untested.
+- Browser-cached text reuse and basic vision inference are feasible. Full PWA offline launch remains untested.
 
 ## Tested configurations
 
-| Date       | Browser environment           | GPU report   | Result                                                      |
-| ---------- | ----------------------------- | ------------ | ----------------------------------------------------------- |
-| 2026-06-21 | Codex in-app Chromium browser | Intel, Gen 9 | WebGPU adapter and device initialized successfully          |
-| 2026-06-21 | Codex in-app Chromium browser | Intel, Gen 9 | SmolLM2 loaded, streamed, cancelled, unloaded, and reloaded |
+| Date       | Browser environment           | GPU report   | Result                                                                     |
+| ---------- | ----------------------------- | ------------ | -------------------------------------------------------------------------- |
+| 2026-06-21 | Codex in-app Chromium browser | Intel, Gen 9 | WebGPU adapter and device initialized successfully                         |
+| 2026-06-21 | Codex in-app Chromium browser | Intel, Gen 9 | SmolLM2 loaded, streamed, cancelled, unloaded, and reloaded                |
+| 2026-06-21 | Codex in-app Chromium browser | Intel, Gen 9 | Cached-only SmolLM2 inference completed with Hugging Face requests blocked |
+| 2026-06-21 | Codex in-app Chromium browser | Intel, Gen 9 | Quantized ViT-GPT2 captioned a browser-created PNG                         |
 
 ## Observed browser signals
 
@@ -64,6 +66,43 @@ These values are observations from one environment, not minimum requirements.
 - Cached loading is substantially faster than first loading.
 - No browser warnings or errors were observed during the tested run.
 
+### Cache-only verification
+
+Transformers.js reported that every required SmolLM2 pipeline file was cached. Emberbench then installed a worker-level guard that rejected all requests to `huggingface.co`, loaded the model from browser cache, and completed a 64-token generation.
+
+| Measurement             | Observed value |
+| ----------------------- | -------------: |
+| Cache-only model reload |         2.63 s |
+| Cache-only first token  |         429 ms |
+| Cache-only 64-token run |        11.65 s |
+
+This proves that the model no longer needs Hugging Face after caching. It does not yet prove that the complete application shell launches offline; that requires the PWA service-worker phase.
+
+## Vision spike
+
+### Configuration
+
+- Runtime: Transformers.js 4.2.0
+- Model: `Xenova/vit-gpt2-image-captioning`
+- Precision: Q8
+- Execution: WebGPU inside a dedicated worker
+- Input: browser-generated PNG containing a simple house, car, sun, grass, and sky
+
+### Measurements
+
+| Measurement                                | Observed value |
+| ------------------------------------------ | -------------: |
+| Combined browser storage after both models |       434.8 MB |
+| First vision download and initialization   |        52.97 s |
+| Cached vision reload                       |         6.87 s |
+| Caption generation                         |        13.48 s |
+
+Generated caption:
+
+> a small toy house with a red and blue house
+
+The caption is imperfect but recognizes the primary visual subject. Image preprocessing, worker transfer, WebGPU inference, result handling, and unload behavior are therefore feasible.
+
 ## Implemented probe behavior
 
 - Detects missing `navigator.gpu`.
@@ -79,13 +118,13 @@ These values are observations from one environment, not minimum requirements.
 ## Open feasibility risks
 
 - WebGPU device loss during active inference
-- Model cache reuse after a full offline restart
+- Application-shell launch after a full offline restart
 - Multi-gigabyte storage reliability and eviction
-- Vision model preprocessing and inference
+- Higher-quality captioning, OCR, and visual-question-answering models
 - Safari and Firefox behavior
 - Windows and discrete-GPU behavior
 - Hugging Face artifact inspection and CORS behavior
 
 ## Next experiment
 
-Test model cache reuse with the network disabled, then begin the first compact vision-model spike.
+Implement service-worker-backed application-shell offline support, then test a complete offline restart with cached text inference.

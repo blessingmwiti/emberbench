@@ -554,6 +554,32 @@ h2 {
   margin-top: 14px;
 }
 
+.local-only-control {
+  margin-top: 18px;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--cream);
+  cursor: pointer;
+}
+
+.local-only-control input {
+  margin-top: 3px;
+  accent-color: var(--ember);
+}
+
+.local-only-control span {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.local-only-control small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
 .model-progress {
   height: 6px;
   margin-top: 20px;
@@ -626,6 +652,96 @@ h2 {
   color: var(--muted);
   font-size: 11px;
   line-height: 1.6;
+}
+
+.vision-lab-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 0.75fr;
+  gap: 12px;
+}
+
+.vision-input,
+.vision-result {
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.vision-preview {
+  min-height: 330px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background:
+    linear-gradient(45deg, #17110e 25%, transparent 25%),
+    linear-gradient(-45deg, #17110e 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #17110e 75%),
+    linear-gradient(-45deg, transparent 75%, #17110e 75%), #100c0a;
+  background-position:
+    0 0,
+    0 8px,
+    8px -8px,
+    -8px 0;
+  background-size: 16px 16px;
+  color: var(--muted);
+}
+
+.vision-preview img {
+  width: 100%;
+  height: 330px;
+  display: block;
+  object-fit: contain;
+}
+
+.file-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.file-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.vision-result blockquote {
+  min-height: 180px;
+  margin: 24px 0;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #110d0b;
+  color: #d8cec7;
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.vision-result dl {
+  margin: 0;
+}
+
+.vision-result dl div {
+  padding: 14px 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.vision-result dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.vision-result dd {
+  margin: 0;
+  text-align: right;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 11px;
 }
 
 .roadmap-section h2 {
@@ -713,6 +829,7 @@ footer span:first-child {
   .section-heading,
   .model-lab-heading,
   .model-lab-grid,
+  .vision-lab-grid,
   .diagnostics-section {
     grid-template-columns: 1fr;
     gap: 38px;

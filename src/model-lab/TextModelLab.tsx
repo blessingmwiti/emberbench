@@ -40,6 +40,8 @@ export function TextModelLab() {
   const [loadTimeMs, setLoadTimeMs] = useState<number | null>(null);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [cached, setCached] = useState<boolean | null>(null);
+  const [cachedFilesOnly, setCachedFilesOnly] = useState(false);
 
   useEffect(
     () => () => {
@@ -61,6 +63,9 @@ export function TextModelLab() {
       const message = event.data;
 
       switch (message.type) {
+        case 'cache-status':
+          setCached(message.cached);
+          break;
         case 'progress': {
           const nextProgress = readProgress(message.data);
           if (nextProgress !== null) {
@@ -127,7 +132,7 @@ export function TextModelLab() {
     setError(null);
     setProgress(0);
     setStatus('loading');
-    post({ type: 'load' });
+    post({ cachedFilesOnly, type: 'load' });
   }
 
   function generate() {
@@ -226,6 +231,19 @@ export function TextModelLab() {
             ) : null}
           </div>
 
+          <label className="local-only-control">
+            <input
+              checked={cachedFilesOnly}
+              disabled={busy || modelReady}
+              onChange={(event) => setCachedFilesOnly(event.target.checked)}
+              type="checkbox"
+            />
+            <span>
+              Cached files only
+              <small>Blocks runtime requests for missing Hugging Face model files.</small>
+            </span>
+          </label>
+
           {status === 'loading' ? (
             <div
               aria-label={`Model loading progress: ${progress ?? 0}%`}
@@ -271,7 +289,13 @@ export function TextModelLab() {
             </div>
             <div>
               <dt>Model files</dt>
-              <dd>Browser cache</dd>
+              <dd>
+                {cached === null ? 'Not checked' : cached ? 'Fully cached' : 'Download required'}
+              </dd>
+            </div>
+            <div>
+              <dt>Load policy</dt>
+              <dd>{cachedFilesOnly ? 'Browser cache only' : 'Cache + network'}</dd>
             </div>
           </dl>
           <p>These are measurements from this browser session, not universal performance claims.</p>
