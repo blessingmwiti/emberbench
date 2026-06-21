@@ -6,6 +6,7 @@ import {
   runDeviceDiagnostics,
 } from '../diagnostics/run-device-diagnostics';
 import type { DeviceDiagnostic, DiagnosticStatus } from '../diagnostics/types';
+import { ModelImporter } from '../models/importer/ModelImporter';
 import { TextModelLab } from '../model-lab/TextModelLab';
 import { PwaStatus } from '../pwa/PwaStatus';
 import { VisionModelLab } from '../vision-lab/VisionModelLab';
@@ -100,6 +101,7 @@ export function App() {
           <a href="#diagnostics">Device</a>
           <a href="#model-lab">Model Lab</a>
           <a href="#vision-lab">Vision</a>
+          <a href="#model-importer">Import</a>
           <a href="#roadmap">Roadmap</a>
         </nav>
         <PwaStatus />
@@ -256,6 +258,8 @@ export function App() {
         <TextModelLab />
 
         <VisionModelLab />
+
+        <ModelImporter />
 
         <section className="section roadmap-section" id="roadmap">
           <p className="kicker">BUILD ORDER</p>

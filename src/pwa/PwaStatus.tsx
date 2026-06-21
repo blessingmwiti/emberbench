@@ -25,6 +25,10 @@ export function PwaStatus() {
     };
   }, []);
 
+  if (import.meta.env.DEV) {
+    return <div className="pwa-pill">Development mode</div>;
+  }
+
   if (workerState.status === 'update-available') {
     return (
       <button

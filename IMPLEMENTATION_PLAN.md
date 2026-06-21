@@ -131,16 +131,16 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Hugging Face inspection spike
 
-- [ ] Parse `owner/model` identifiers.
-- [ ] Parse standard Hugging Face model URLs.
-- [ ] Reject malformed and non-Hugging Face URLs safely.
-- [ ] Fetch public repository metadata.
-- [ ] Inspect repository siblings/files.
-- [ ] Read `config.json` without executing repository code.
-- [ ] Identify ONNX and quantized artifacts.
-- [ ] Identify required tokenizer and processor assets.
-- [ ] Detect repositories that require authentication.
-- [ ] Produce a rough `ready`, `conversion-required`, or `unsupported` result.
+- [x] Parse `owner/model` identifiers.
+- [x] Parse standard Hugging Face model URLs.
+- [x] Reject malformed and non-Hugging Face URLs safely.
+- [x] Fetch public repository metadata.
+- [x] Inspect repository siblings/files.
+- [x] Read configuration metadata without executing repository code.
+- [x] Identify ONNX and quantized artifacts.
+- [x] Identify required tokenizer and processor assets.
+- [x] Detect repositories that require authentication.
+- [x] Produce a rough `ready`, `conversion-required`, or `unsupported` result.
 
 ### Feasibility report
 
@@ -632,8 +632,8 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Exit criteria
 
-- [ ] Public Hugging Face URLs produce deterministic compatibility reports.
-- [ ] Unsupported repositories explain why they cannot run.
+- [x] Public Hugging Face URLs produce deterministic metadata compatibility reports.
+- [x] Unsupported repositories explain why they cannot run at the metadata layer.
 - [ ] Compatible repositories can be installed and run from pinned artifacts.
 - [ ] Repository content is always treated as untrusted data.
 
@@ -1096,4 +1096,4 @@ Ideas belong here until they are accepted into a chronological phase.
 
 ## Current next action
 
-- [ ] Begin public Hugging Face URL parsing, repository inspection, and compatibility reporting.
+- [ ] Add task-aware compatibility rules, recommended artifact selection, and runtime initialization probing.

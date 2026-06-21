@@ -830,6 +830,166 @@ h2 {
   font-size: 11px;
 }
 
+.importer-grid {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.importer-form,
+.compatibility-report {
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.importer-form > label {
+  display: block;
+  margin-bottom: 9px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.importer-input-row {
+  display: flex;
+  gap: 10px;
+}
+
+.importer-input-row input {
+  min-width: 0;
+  flex: 1;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  outline: none;
+  background: #110d0b;
+  color: var(--cream);
+}
+
+.importer-input-row input:focus {
+  border-color: var(--ember);
+  box-shadow: 0 0 0 3px rgb(255 113 68 / 12%);
+}
+
+.importer-form > p {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.compatibility-report {
+  min-height: 350px;
+}
+
+.compatibility-report__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.compatibility-report h3 {
+  margin: 8px 0 0;
+  font-size: 22px;
+}
+
+.outcome-badge {
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.outcome-badge--ready {
+  border-color: #35523b;
+  color: var(--green);
+}
+
+.outcome-badge--conversion-required {
+  border-color: #5d4930;
+  color: var(--gold);
+}
+
+.outcome-badge--unsupported {
+  border-color: #713c2c;
+  color: var(--ember-light);
+}
+
+.compatibility-facts {
+  margin: 24px 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.compatibility-facts div {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.compatibility-facts div:nth-child(odd) {
+  padding-right: 20px;
+}
+
+.compatibility-facts dt {
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.compatibility-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 11px;
+}
+
+.compatibility-reasons {
+  margin: 0 0 22px;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.revision-line {
+  margin-bottom: 18px;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.revision-line code {
+  overflow-wrap: anywhere;
+  color: var(--cream);
+  text-align: right;
+}
+
+.compatibility-report > a {
+  color: var(--gold);
+  font-size: 11px;
+}
+
+.report-placeholder {
+  min-height: 300px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  color: var(--muted);
+  text-align: center;
+}
+
+.report-placeholder span {
+  color: var(--ember);
+  font-size: 30px;
+}
+
 .roadmap-section h2 {
   max-width: 600px;
 }
@@ -916,6 +1076,7 @@ footer span:first-child {
   .model-lab-heading,
   .model-lab-grid,
   .vision-lab-grid,
+  .importer-grid,
   .diagnostics-section {
     grid-template-columns: 1fr;
     gap: 38px;
@@ -969,6 +1130,14 @@ footer span:first-child {
 
   .diagnostic-list {
     grid-template-columns: 1fr;
+  }
+
+  .importer-input-row {
+    flex-direction: column;
+  }
+
+  .importer-input-row input {
+    min-height: 48px;
   }
 
   .diagnostic-list div,

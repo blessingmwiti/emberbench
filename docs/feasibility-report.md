@@ -136,6 +136,26 @@ The caption is imperfect but recognizes the primary visual subject. Image prepro
 - Reports online, secure-context, storage quota, usage, and persistence state.
 - Does not claim to know exact usable GPU memory.
 
+## Hugging Face inspection spike
+
+The first public-repository inspector now:
+
+- Accepts strict `owner/model` identifiers and canonical Hugging Face URLs.
+- Rejects non-Hugging-Face hosts and malformed identifiers before fetching.
+- Fetches public model metadata with blob sizes.
+- Pins the inspected repository commit SHA.
+- Counts configuration, tokenizer, processor, ONNX, and reduced-precision artifacts.
+- Detects gated, private, disabled, and custom-code model metadata.
+- Produces `Ready to run`, `Conversion required`, or `Unsupported`.
+
+Live browser checks classified:
+
+- `onnx-community/SmolLM2-135M-ONNX` as ready to run.
+- `Qwen/Qwen2.5-Coder-1.5B-Instruct` as conversion required because the source repository lacks ONNX artifacts.
+- A non-Hugging-Face URL as invalid without making a repository request.
+
+The result is metadata-based. A lightweight runtime initialization probe is still required before an imported model can be labeled fully verified.
+
 ## Open feasibility risks
 
 - WebGPU device loss during active inference
@@ -148,4 +168,4 @@ The caption is imperfect but recognizes the primary visual subject. Image prepro
 
 ## Next experiment
 
-Begin public Hugging Face URL parsing, repository inspection, and compatibility reporting.
+Add task-aware compatibility rules, recommended artifact selection, and runtime initialization probing.

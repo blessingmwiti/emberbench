@@ -79,3 +79,21 @@ export async function registerServiceWorker() {
     publish({ applyUpdate: null, status: 'ready' });
   }
 }
+
+export async function clearDevelopmentServiceWorkers() {
+  if ('serviceWorker' in navigator) {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(
+      registrations
+        .filter((registration) => registration.scope === `${window.location.origin}/`)
+        .map((registration) => registration.unregister()),
+    );
+  }
+
+  if ('caches' in window) {
+    const keys = await caches.keys();
+    await Promise.all(
+      keys.filter((key) => key.startsWith('emberbench-shell-')).map((key) => caches.delete(key)),
+    );
+  }
+}
