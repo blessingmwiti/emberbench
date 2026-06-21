@@ -354,6 +354,102 @@ h2 {
   line-height: 1.6;
 }
 
+.model-library-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.model-library-card {
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.model-library-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--muted);
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.model-status {
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+}
+
+.model-status--experimental {
+  border-color: #5d4930;
+  color: var(--gold);
+}
+
+.model-status--supported {
+  border-color: #35523b;
+  color: var(--green);
+}
+
+.model-library-card h3 {
+  margin: 28px 0 10px;
+  font-size: 28px;
+  letter-spacing: -0.04em;
+}
+
+.model-library-card > p {
+  min-height: 70px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.model-library-card dl {
+  margin: 24px 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.model-library-card dl div {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.model-library-card dt {
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.model-library-card dd {
+  margin: 0;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 11px;
+}
+
+.capability-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 22px;
+}
+
+.capability-list span {
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.model-library-card > a {
+  color: var(--gold);
+  font-size: 11px;
+}
+
 .coming-soon {
   color: var(--gold);
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
@@ -1153,6 +1249,10 @@ footer span:first-child {
   }
 
   .workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .model-library-grid {
     grid-template-columns: 1fr;
   }
 

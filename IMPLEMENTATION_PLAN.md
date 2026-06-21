@@ -239,17 +239,17 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Shared model types
 
-- [ ] Define `ModelSource`.
-- [ ] Define `ModelManifest`.
-- [ ] Define `ModelArtifact`.
-- [ ] Define `ModelCapability`.
-- [ ] Define `ModelPrecision`.
-- [ ] Define `RuntimeRequirement`.
-- [ ] Define `CompatibilityReport`.
+- [x] Define `ModelSource`.
+- [x] Define `ModelManifest`.
+- [x] Define `ModelArtifact`.
+- [x] Define `ModelCapability`.
+- [x] Define `ModelPrecision`.
+- [x] Define `RuntimeRequirement`.
+- [x] Define `CompatibilityReport`.
 - [ ] Define `InstalledModel`.
 - [ ] Define `ModelSession`.
 - [ ] Define serializable model input and output event types.
-- [ ] Version persisted schemas from the beginning.
+- [x] Version model manifest schemas from the beginning.
 
 ### Runtime contract
 
@@ -265,16 +265,16 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Curated model registry
 
-- [ ] Define a validated manifest file format.
-- [ ] Add schema validation for manifests.
-- [ ] Add source repository and pinned revision fields.
-- [ ] Add model license fields.
-- [ ] Add task and workspace compatibility fields.
+- [x] Define a validated manifest file format.
+- [x] Add schema validation for manifests.
+- [x] Add source repository and pinned revision fields.
+- [x] Add model license fields.
+- [x] Add task and workspace compatibility fields.
 - [x] Add artifact size and precision fields to compatibility reports.
-- [ ] Add minimum/recommended device-tier fields.
-- [ ] Add model status: experimental, supported, or recommended.
-- [ ] Add the first tiny development model.
-- [ ] Build catalog filtering and lookup APIs.
+- [x] Add minimum/recommended device-tier fields.
+- [x] Add model status: experimental, supported, or recommended.
+- [x] Add the first tiny development model.
+- [x] Build catalog filtering and lookup APIs.
 
 ### State management
 
@@ -288,9 +288,9 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Exit criteria
 
-- [ ] Domain schemas are validated at runtime.
+- [x] Model manifest domain schemas are validated at runtime.
 - [ ] Runtime adapters can be swapped without changing workspace components.
-- [ ] A curated model can be resolved entirely from its manifest.
+- [x] A curated model can be resolved entirely from its manifest.
 - [ ] Core architecture has automated contract tests.
 
 ---
@@ -1096,4 +1096,4 @@ Ideas belong here until they are accepted into a chronological phase.
 
 ## Current next action
 
-- [ ] Create the curated model manifest schema and registry foundation.
+- [ ] Define the common runtime adapter contract and error semantics.

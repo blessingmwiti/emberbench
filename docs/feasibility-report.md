@@ -170,4 +170,4 @@ An explicit runtime probe then downloaded the pinned SmolLM2 revision, initializ
 
 ## Next experiment
 
-Create the curated model manifest schema and registry foundation.
+Define the common runtime adapter contract and error semantics.

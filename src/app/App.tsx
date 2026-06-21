@@ -7,6 +7,7 @@ import {
 } from '../diagnostics/run-device-diagnostics';
 import type { DeviceDiagnostic, DiagnosticStatus } from '../diagnostics/types';
 import { ModelImporter } from '../models/importer/ModelImporter';
+import { ModelLibrary } from '../models/catalog/ModelLibrary';
 import { TextModelLab } from '../model-lab/TextModelLab';
 import { PwaStatus } from '../pwa/PwaStatus';
 import { VisionModelLab } from '../vision-lab/VisionModelLab';
@@ -98,6 +99,7 @@ export function App() {
         </a>
         <nav aria-label="Primary navigation">
           <a href="#workspaces">Workspaces</a>
+          <a href="#models">Models</a>
           <a href="#diagnostics">Device</a>
           <a href="#model-lab">Model Lab</a>
           <a href="#vision-lab">Vision</a>
@@ -161,6 +163,8 @@ export function App() {
             ))}
           </div>
         </section>
+
+        <ModelLibrary />
 
         <section className="section diagnostics-section" id="diagnostics">
           <div className="diagnostic-copy">
