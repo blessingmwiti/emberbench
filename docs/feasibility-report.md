@@ -170,4 +170,4 @@ An explicit runtime probe then downloaded the pinned SmolLM2 revision, initializ
 
 ## Next experiment
 
-Add persistent installed-model records and lifecycle state.
+Surface installed-model state in the curated model library.

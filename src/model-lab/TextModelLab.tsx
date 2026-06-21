@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { findCuratedModel } from '../models/catalog/registry';
+import type { InstalledModel, InstalledModelStatus } from '../models/catalog/types';
+import { createInstalledModel, transitionInstalledModel } from '../models/installed-model';
+import { installedModels } from '../storage/database';
 import type { RuntimeCacheStatus, RuntimeEvent } from '../runtimes/core/types';
 import { RuntimeError } from '../runtimes/core/errors';
 import { TransformersTextWorkerAdapter } from '../runtimes/transformers/text-worker-adapter';
@@ -53,9 +56,23 @@ export function TextModelLab() {
   });
   const [cacheInspected, setCacheInspected] = useState(false);
   const [cachedFilesOnly, setCachedFilesOnly] = useState(false);
+  const [installRecord, setInstallRecord] = useState<InstalledModel | null>(null);
+  const [storageMessage, setStorageMessage] = useState<string | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
+    void installedModels
+      .get(textModel.id)
+      .then((record) => {
+        if (mountedRef.current) {
+          setInstallRecord(record);
+        }
+      })
+      .catch(() => {
+        if (mountedRef.current) {
+          setStorageMessage('Installed-model metadata is unavailable in this browser.');
+        }
+      });
     return () => {
       mountedRef.current = false;
       adapterRef.current?.terminate();
@@ -69,11 +86,7 @@ export function TextModelLab() {
 
   async function inspectCache() {
     try {
-      const nextStatus = await ensureAdapter().inspectCache(textModel);
-      if (mountedRef.current) {
-        setCacheStatus(nextStatus);
-        setCacheInspected(true);
-      }
+      await readCacheStatus();
     } catch (inspectionError) {
       if (mountedRef.current) {
         setError(displayRuntimeError(inspectionError, 'Model cache inspection failed.'));
@@ -81,9 +94,50 @@ export function TextModelLab() {
     }
   }
 
+  async function readCacheStatus() {
+    const nextStatus = await ensureAdapter().inspectCache(textModel);
+    if (mountedRef.current) {
+      setCacheStatus(nextStatus);
+      setCacheInspected(true);
+    }
+    return nextStatus;
+  }
+
+  async function persistInstallRecord(record: InstalledModel) {
+    if (mountedRef.current) {
+      setInstallRecord(record);
+    }
+    try {
+      await installedModels.put(record);
+      if (mountedRef.current) {
+        setStorageMessage(null);
+      }
+    } catch {
+      if (mountedRef.current) {
+        setStorageMessage('The model works, but its installation metadata could not be saved.');
+      }
+    }
+  }
+
+  function beginInstallRecord(existing: InstalledModel | null, status: InstalledModelStatus) {
+    if (!existing || existing.sourceRevision !== textModel.source.revision) {
+      return createInstalledModel(textModel, status);
+    }
+    try {
+      return transitionInstalledModel(existing, status);
+    } catch {
+      return createInstalledModel(textModel, status);
+    }
+  }
+
   async function loadModel() {
     const adapter = ensureAdapter();
     const startedAt = performance.now();
+    let record = beginInstallRecord(
+      await installedModels.get(textModel.id).catch(() => installRecord),
+      cachedFilesOnly ? 'verifying' : 'downloading',
+    );
+    await persistInstallRecord(record);
     setError(null);
     setProgress(0);
     setStatus('loading');
@@ -95,6 +149,8 @@ export function TextModelLab() {
             setProgress(event.progress * 100);
           }
         }
+        record = transitionInstalledModel(record, 'verifying');
+        await persistInstallRecord(record);
       }
 
       await adapter.load(textModel, { cachedFilesOnly });
@@ -104,8 +160,37 @@ export function TextModelLab() {
       setLoadTimeMs(performance.now() - startedAt);
       setProgress(100);
       setStatus('ready');
-      await inspectCache();
+      try {
+        const verifiedCache = await readCacheStatus();
+        const cachedFiles = verifiedCache.files.filter((file) => file.cached).length;
+        record = transitionInstalledModel(record, verifiedCache.cached ? 'installed' : 'failed', {
+          cachedFiles,
+          lastError: verifiedCache.cached
+            ? undefined
+            : 'Cache verification found missing model files.',
+          totalFiles: verifiedCache.files.length,
+        });
+        await persistInstallRecord(record);
+      } catch (verificationError) {
+        record = transitionInstalledModel(record, 'failed', {
+          lastError: displayRuntimeError(verificationError, 'Model cache verification failed.'),
+        });
+        await persistInstallRecord(record);
+        if (mountedRef.current) {
+          setStorageMessage(
+            'The model loaded, but its offline installation could not be verified.',
+          );
+        }
+      }
     } catch (loadError) {
+      try {
+        record = transitionInstalledModel(record, 'failed', {
+          lastError: displayRuntimeError(loadError, 'Model loading failed.'),
+        });
+        await persistInstallRecord(record);
+      } catch {
+        // The visible runtime error remains the authoritative failure signal.
+      }
       if (mountedRef.current) {
         setError(displayRuntimeError(loadError, 'Model loading failed.'));
         setStatus('error');
@@ -341,7 +426,13 @@ export function TextModelLab() {
                     : `${cacheStatus.files.filter((file) => file.cached).length}/${cacheStatus.files.length} files`}
               </dd>
             </div>
+            <div>
+              <dt>Install record</dt>
+              <dd>{installRecord?.status ?? 'Not recorded'}</dd>
+            </div>
           </dl>
+
+          {storageMessage ? <p className="storage-message">{storageMessage}</p> : null}
 
           {cacheStatus.files.length > 0 ? (
             <ul className="cache-file-list">

@@ -49,3 +49,25 @@ export interface ModelManifest {
   status: ModelStatus;
   workspaces: WorkspaceId[];
 }
+
+export type InstalledModelStatus =
+  | 'downloading'
+  | 'verifying'
+  | 'installed'
+  | 'failed'
+  | 'removing';
+
+export interface InstalledModel {
+  cachedFiles: number;
+  createdAt: string;
+  expectedBytes: number;
+  installedAt?: string;
+  lastError?: string;
+  modelId: string;
+  schemaVersion: 1;
+  sourceModelId: string;
+  sourceRevision: string;
+  status: InstalledModelStatus;
+  totalFiles: number;
+  updatedAt: string;
+}

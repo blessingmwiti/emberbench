@@ -246,7 +246,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [x] Define `ModelPrecision`.
 - [x] Define `RuntimeRequirement`.
 - [x] Define `CompatibilityReport`.
-- [ ] Define `InstalledModel`.
+- [x] Define `InstalledModel`.
 - [x] Define `ModelSession`.
 - [x] Define serializable model input and output event types.
 - [x] Version model manifest schemas from the beginning.
@@ -342,14 +342,14 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Persistence layer
 
-- [ ] Define the IndexedDB database and stores.
-- [ ] Add schema migrations.
-- [ ] Store model installation metadata.
+- [x] Define the IndexedDB database and stores.
+- [x] Add schema migrations.
+- [x] Store model installation metadata.
 - [ ] Store application settings.
 - [ ] Store conversations and workspace sessions.
 - [ ] Store benchmark summaries.
-- [ ] Implement transactional writes where state must remain consistent.
-- [ ] Handle corrupted or incompatible persisted data.
+- [x] Implement transactional writes where state must remain consistent.
+- [x] Handle corrupted or incompatible persisted data.
 - [ ] Add a full local-data reset flow.
 
 ### Model artifact storage
@@ -1098,4 +1098,5 @@ Ideas belong here until they are accepted into a chronological phase.
 
 - [x] Implement the first Transformers.js adapter against the common contract.
 - [x] Migrate Text Model Lab to consume the shared runtime adapter.
-- [ ] Add persistent installed-model records and lifecycle state.
+- [x] Add persistent installed-model records and lifecycle state.
+- [ ] Surface installed-model state in the curated model library.
