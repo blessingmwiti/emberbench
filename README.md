@@ -746,7 +746,7 @@ Contribution guidance will be added once the initial runtime proof of concept an
 
 ## License
 
-Emberbench is licensed under the [MIT License](LICENSE).
+Emberbench is licensed under the [Apache License 2.0](LICENSE).
 
 Model licenses are independent of the Emberbench application license and must be displayed and respected individually.
 

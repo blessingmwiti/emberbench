@@ -5,9 +5,9 @@ This is a living record of browser, device, model, storage, and offline feasibil
 ## Current status
 
 - Report started: 2026-06-21
-- Phase: WebGPU capability and text-generation probe
+- Phase: WebGPU, multimodal, and offline feasibility
 - Overall result: WebGPU initialization and worker-based text generation are feasible in the first tested Chromium environment.
-- Browser-cached text reuse and basic vision inference are feasible. Full PWA offline launch remains untested.
+- Browser-cached text reuse, basic vision inference, and service-worker-backed offline launch are feasible.
 
 ## Tested configurations
 
@@ -17,6 +17,7 @@ This is a living record of browser, device, model, storage, and offline feasibil
 | 2026-06-21 | Codex in-app Chromium browser | Intel, Gen 9 | SmolLM2 loaded, streamed, cancelled, unloaded, and reloaded                |
 | 2026-06-21 | Codex in-app Chromium browser | Intel, Gen 9 | Cached-only SmolLM2 inference completed with Hugging Face requests blocked |
 | 2026-06-21 | Codex in-app Chromium browser | Intel, Gen 9 | Quantized ViT-GPT2 captioned a browser-created PNG                         |
+| 2026-06-21 | Codex in-app Chromium browser | Intel, Gen 9 | Production shell reloaded and SmolLM2 ran after the origin server stopped  |
 
 ## Observed browser signals
 
@@ -76,7 +77,21 @@ Transformers.js reported that every required SmolLM2 pipeline file was cached. E
 | Cache-only first token  |         429 ms |
 | Cache-only 64-token run |        11.65 s |
 
-This proves that the model no longer needs Hugging Face after caching. It does not yet prove that the complete application shell launches offline; that requires the PWA service-worker phase.
+This proves that the model no longer needs Hugging Face after caching. The following production restart test verifies the application shell separately.
+
+### Full offline restart verification
+
+The production application registered a versioned service worker that precached all nine shell assets, including the text and vision workers and the ONNX Runtime WebAssembly fallback.
+
+The origin preview server was then stopped completely. Emberbench reloaded successfully from the service worker, loaded SmolLM2 while all Hugging Face requests were blocked, and completed a 64-token WebGPU generation.
+
+| Measurement                     | Observed value |
+| ------------------------------- | -------------: |
+| Offline production model reload |         2.97 s |
+| Offline time to first token     |         437 ms |
+| Offline 64-token generation     |        13.53 s |
+
+No browser warnings or errors were observed. `navigator.onLine` remained true because the browser still had general internet connectivity; the stronger test conditions were that the application origin was unavailable and the model worker rejected Hugging Face access.
 
 ## Vision spike
 
@@ -118,7 +133,7 @@ The caption is imperfect but recognizes the primary visual subject. Image prepro
 ## Open feasibility risks
 
 - WebGPU device loss during active inference
-- Application-shell launch after a full offline restart
+- PWA installation behavior outside the in-app Chromium environment
 - Multi-gigabyte storage reliability and eviction
 - Higher-quality captioning, OCR, and visual-question-answering models
 - Safari and Firefox behavior
@@ -127,4 +142,4 @@ The caption is imperfect but recognizes the primary visual subject. Image prepro
 
 ## Next experiment
 
-Implement service-worker-backed application-shell offline support, then test a complete offline restart with cached text inference.
+Add persistent-storage controls and inspect browser-cache file completeness in the model manager.

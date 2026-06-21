@@ -4,6 +4,7 @@ import { formatBytes } from '../diagnostics/format';
 import { runDeviceDiagnostics } from '../diagnostics/run-device-diagnostics';
 import type { DeviceDiagnostic, DiagnosticStatus } from '../diagnostics/types';
 import { TextModelLab } from '../model-lab/TextModelLab';
+import { PwaStatus } from '../pwa/PwaStatus';
 import { VisionModelLab } from '../vision-lab/VisionModelLab';
 
 const workspaces = [
@@ -75,10 +76,7 @@ export function App() {
           <a href="#vision-lab">Vision</a>
           <a href="#roadmap">Roadmap</a>
         </nav>
-        <div className="local-pill">
-          <span aria-hidden="true">●</span>
-          Local by default
-        </div>
+        <PwaStatus />
       </header>
 
       <main id="top">
