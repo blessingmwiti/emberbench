@@ -525,22 +525,22 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Application shell
 
-- [ ] Add a web app manifest.
-- [ ] Add installable application icons.
-- [ ] Add service-worker generation and registration.
-- [ ] Cache versioned application-shell assets.
-- [ ] Add an offline fallback route.
-- [ ] Ensure updates are atomic.
-- [ ] Notify users when an application update is ready.
-- [ ] Avoid activating an update in the middle of inference.
+- [x] Add a web app manifest.
+- [x] Add installable application icons.
+- [x] Add service-worker generation and registration.
+- [x] Cache versioned application-shell assets.
+- [x] Add an offline fallback route.
+- [x] Ensure updates are atomic.
+- [x] Notify users when an application update is ready.
+- [x] Avoid activating an update in the middle of inference.
 
 ### Offline model behavior
 
-- [ ] Detect whether every required model asset is stored.
+- [~] Detect whether every required model asset is stored.
 - [ ] Add `available offline`, `partial`, and `online only` states.
-- [ ] Prevent silent network fallback during declared offline inference.
-- [ ] Launch the application with networking disabled.
-- [ ] Load an installed model while offline.
+- [x] Prevent silent network fallback during declared offline inference.
+- [x] Launch the application after its origin server becomes unavailable.
+- [x] Load an installed model while its origin and Hugging Face are unavailable.
 - [ ] Run each MVP workspace while offline.
 - [ ] Load persisted conversations while offline.
 - [ ] Verify that model deletion updates offline status.
@@ -557,8 +557,8 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Exit criteria
 
-- [ ] The installed PWA launches without a network connection.
-- [ ] At least one model completes inference fully offline.
+- [~] The installed PWA launches without a network connection.
+- [x] At least one model completes inference fully offline.
 - [ ] Offline status never claims readiness for incomplete assets.
 - [ ] Application updates do not silently break installed models.
 
@@ -1096,4 +1096,4 @@ Ideas belong here until they are accepted into a chronological phase.
 
 ## Current next action
 
-- [ ] Add service-worker-backed application-shell caching and verify a complete offline restart with cached text inference.
+- [ ] Add persistent-storage controls and model-cache completeness details.

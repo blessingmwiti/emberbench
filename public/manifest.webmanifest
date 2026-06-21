@@ -1,0 +1,24 @@
+{
+  "name": "Emberbench",
+  "short_name": "Emberbench",
+  "description": "A private, browser-native AI workbench powered by WebGPU.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#15100d",
+  "theme_color": "#15100d",
+  "icons": [
+    {
+      "src": "/emberbench.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/emberbench-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

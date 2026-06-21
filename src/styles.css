@@ -102,11 +102,13 @@ nav a:hover {
   color: var(--cream);
 }
 
-.local-pill {
+.pwa-pill {
   justify-self: end;
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  border: 0;
+  background: transparent;
   color: var(--green);
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
   font-size: 11px;
@@ -114,9 +116,21 @@ nav a:hover {
   text-transform: uppercase;
 }
 
-.local-pill span {
+.pwa-pill span {
   font-size: 8px;
   box-shadow: 0 0 12px var(--green);
+}
+
+.pwa-pill--offline {
+  color: var(--gold);
+}
+
+.pwa-pill--update {
+  padding: 7px 10px;
+  border: 1px solid #5d4930;
+  border-radius: 20px;
+  color: var(--gold);
+  cursor: pointer;
 }
 
 .hero,
@@ -857,12 +871,16 @@ footer span:first-child {
     width: min(100% - 28px, 1180px);
   }
 
-  .local-pill {
+  .pwa-pill {
     font-size: 0;
   }
 
-  .local-pill span {
+  .pwa-pill span {
     font-size: 8px;
+  }
+
+  .pwa-pill--update {
+    font-size: 9px;
   }
 
   .hero h1 {
