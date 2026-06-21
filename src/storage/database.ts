@@ -4,6 +4,13 @@ import { parseInstalledModel } from '../models/installed-model';
 const DATABASE_NAME = 'emberbench';
 const DATABASE_VERSION = 1;
 const INSTALLED_MODELS_STORE = 'installed-models';
+export const INSTALLED_MODELS_CHANGED_EVENT = 'emberbench:installed-models-changed';
+
+function announceInstalledModelsChanged() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(INSTALLED_MODELS_CHANGED_EVENT));
+  }
+}
 
 function requestResult<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -70,6 +77,7 @@ export class InstalledModelRepository {
       const completed = transactionCompleted(transaction);
       await requestResult(transaction.objectStore(INSTALLED_MODELS_STORE).delete(modelId));
       await completed;
+      announceInstalledModelsChanged();
     } finally {
       database.close();
     }
@@ -130,6 +138,7 @@ export class InstalledModelRepository {
       const completed = transactionCompleted(transaction);
       await requestResult(transaction.objectStore(INSTALLED_MODELS_STORE).put(model));
       await completed;
+      announceInstalledModelsChanged();
     } finally {
       database.close();
     }

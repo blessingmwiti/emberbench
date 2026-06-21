@@ -360,11 +360,57 @@ h2 {
   gap: 12px;
 }
 
+.model-library-summary {
+  display: block;
+  margin-top: 12px;
+  color: var(--gold);
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .model-library-card {
   padding: 28px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--surface);
+}
+
+.installation-status {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  margin-top: 18px;
+  color: var(--muted);
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.installation-status span {
+  color: #5e5a53;
+  font-size: 8px;
+}
+
+.installation-status--installed,
+.installation-status--verifying,
+.installation-status--downloading {
+  color: var(--green);
+}
+
+.installation-status--installed span,
+.installation-status--verifying span,
+.installation-status--downloading span {
+  color: var(--green);
+}
+
+.installation-status--failed {
+  color: var(--ember);
+}
+
+.installation-status--failed span {
+  color: var(--ember);
 }
 
 .model-library-card__header {
@@ -394,7 +440,7 @@ h2 {
 }
 
 .model-library-card h3 {
-  margin: 28px 0 10px;
+  margin: 12px 0 10px;
   font-size: 28px;
   letter-spacing: -0.04em;
 }

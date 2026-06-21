@@ -170,4 +170,4 @@ An explicit runtime probe then downloaded the pinned SmolLM2 revision, initializ
 
 ## Next experiment
 
-Surface installed-model state in the curated model library.
+Add runtime capability discovery and device-tier recommendations.

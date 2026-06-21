@@ -468,7 +468,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [ ] Show precision and artifact size.
 - [ ] Show source, pinned revision, and license.
 - [ ] Show supported workspaces.
-- [ ] Show installed/offline status.
+- [x] Show installed/offline status.
 - [ ] Add install, load, unload, and delete actions.
 - [ ] Add model detail pages.
 
@@ -1099,4 +1099,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Implement the first Transformers.js adapter against the common contract.
 - [x] Migrate Text Model Lab to consume the shared runtime adapter.
 - [x] Add persistent installed-model records and lifecycle state.
-- [ ] Surface installed-model state in the curated model library.
+- [x] Surface installed-model state in the curated model library.
+- [ ] Add runtime capability discovery and device-tier recommendations.
