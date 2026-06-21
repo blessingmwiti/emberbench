@@ -129,4 +129,21 @@ describe('TransformersTextWorkerAdapter', () => {
       files: [{ cached: true, file: 'onnx/model_q4.onnx' }],
     });
   });
+
+  it('deletes the pinned pipeline cache through the worker', async () => {
+    const worker = new FakeWorker();
+    const adapter = new TransformersTextWorkerAdapter(() => worker);
+    const manifest = getTextManifest();
+    const deletion = adapter.deleteCache(manifest);
+
+    expect(worker.requests[0]).toMatchObject({
+      dtype: 'q4',
+      modelId: manifest.source.modelId,
+      revision: manifest.source.revision,
+      type: 'delete-cache',
+    });
+    worker.emit({ filesCached: 6, filesDeleted: 6, type: 'cache-deleted' });
+
+    await expect(deletion).resolves.toEqual({ filesCached: 6, filesDeleted: 6 });
+  });
 });

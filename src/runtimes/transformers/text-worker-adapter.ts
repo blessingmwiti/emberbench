@@ -13,6 +13,7 @@ import type {
   RuntimeRunOptions,
   RuntimeCacheStatus,
   RuntimeCapabilities,
+  RuntimeCacheDeleteResult,
   RuntimeSession,
 } from '../core/types';
 
@@ -59,6 +60,10 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
   readonly id = 'transformers-js/text-worker';
   private activeRequestId: string | null = null;
   private currentManifest: ModelManifest | null = null;
+  private deletePromise: {
+    reject: (reason?: unknown) => void;
+    resolve: (result: RuntimeCacheDeleteResult) => void;
+  } | null = null;
   private cachePromise: {
     reject: (reason?: unknown) => void;
     resolve: (status: RuntimeCacheStatus) => void;
@@ -138,6 +143,32 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
       yield* queue;
     } finally {
       options.signal?.removeEventListener('abort', abort);
+    }
+  }
+
+  deleteCache(manifest: ModelManifest): Promise<RuntimeCacheDeleteResult> {
+    try {
+      this.assertSupportedManifest(manifest);
+      if (this.deletePromise) {
+        throw new RuntimeError('ALREADY_RUNNING', 'Model cache deletion is already running.', {
+          recoverable: true,
+        });
+      }
+      if (this.downloadQueue || this.loadPromise || this.runQueue) {
+        throw new RuntimeError(
+          'ALREADY_RUNNING',
+          'Wait for the active model operation before deleting its cache.',
+          { recoverable: true },
+        );
+      }
+
+      const deleting = new Promise<RuntimeCacheDeleteResult>((resolve, reject) => {
+        this.deletePromise = { reject, resolve };
+      });
+      this.worker.postMessage({ ...toWorkerConfig(manifest), type: 'delete-cache' });
+      return deleting;
+    } catch (error) {
+      return Promise.reject(toRuntimeError(error, 'CACHE_DELETE_FAILED'));
     }
   }
 
@@ -269,6 +300,8 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
     this.downloadQueue = null;
     this.cachePromise?.reject(error);
     this.cachePromise = null;
+    this.deletePromise?.reject(error);
+    this.deletePromise = null;
     this.runQueue?.fail(error);
     this.runQueue = null;
     this.loadPromise?.reject(error);
@@ -357,6 +390,15 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
           files: message.files,
         });
         this.cachePromise = null;
+        break;
+      case 'cache-deleted':
+        this.session = null;
+        this.currentManifest = null;
+        this.deletePromise?.resolve({
+          filesCached: message.filesCached,
+          filesDeleted: message.filesDeleted,
+        });
+        this.deletePromise = null;
         break;
     }
   }

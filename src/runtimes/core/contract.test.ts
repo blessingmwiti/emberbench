@@ -16,6 +16,7 @@ function createAdapter(): ModelRuntimeAdapter {
       streaming: true,
       tasks: ['text-generation'],
     }),
+    deleteCache: () => Promise.resolve({ filesCached: 0, filesDeleted: 0 }),
     async *download() {},
     id: 'fake',
     inspect: () => Promise.resolve(null),

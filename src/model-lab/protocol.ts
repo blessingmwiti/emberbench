@@ -28,6 +28,9 @@ export type TextModelWorkerRequest =
   | (TextModelWorkerConfig & {
       type: 'inspect-cache';
     })
+  | (TextModelWorkerConfig & {
+      type: 'delete-cache';
+    })
   | {
       type: 'unload';
     };
@@ -70,4 +73,9 @@ export type TextModelWorkerEvent =
     }
   | {
       type: 'unloaded';
+    }
+  | {
+      filesCached: number;
+      filesDeleted: number;
+      type: 'cache-deleted';
     };

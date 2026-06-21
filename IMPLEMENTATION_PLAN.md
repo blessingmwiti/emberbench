@@ -360,7 +360,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [ ] Track expected file sizes.
 - [ ] Track available hashes, ETags, or revision metadata.
 - [ ] Verify all required artifacts before marking a model installed.
-- [ ] Implement deletion.
+- [~] Implement deletion.
 - [ ] Implement installation verification.
 - [ ] Implement installation repair.
 
@@ -1101,4 +1101,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Add persistent installed-model records and lifecycle state.
 - [x] Surface installed-model state in the curated model library.
 - [x] Add runtime capability discovery and device-tier recommendations.
-- [ ] Add model deletion with cache and metadata cleanup.
+- [x] Add model deletion with cache and metadata cleanup for the text runtime.
+- [ ] Add equivalent cache lifecycle support to the vision runtime adapter.

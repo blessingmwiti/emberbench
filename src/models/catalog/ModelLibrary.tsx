@@ -8,6 +8,8 @@ import {
 } from '../../diagnostics/recommend-device-tier';
 import type { DeviceDiagnostic } from '../../diagnostics/types';
 import type { InstalledModel, ModelManifest } from './types';
+import { transitionInstalledModel } from '../installed-model';
+import { TransformersTextWorkerAdapter } from '../../runtimes/transformers/text-worker-adapter';
 import { INSTALLED_MODELS_CHANGED_EVENT, installedModels } from '../../storage/database';
 import { getCuratedModels, getModelDownloadSize } from './registry';
 
@@ -43,6 +45,9 @@ const DEVICE_FIT_LABELS: Record<ModelDeviceFit, string> = {
 export function ModelLibrary({ diagnostic }: { diagnostic: DeviceDiagnostic | null }) {
   const [installations, setInstallations] = useState<Map<string, InstalledModel>>(new Map());
   const [storageAvailable, setStorageAvailable] = useState(true);
+  const [confirmRemovalId, setConfirmRemovalId] = useState<string | null>(null);
+  const [removingModelId, setRemovingModelId] = useState<string | null>(null);
+  const [removalError, setRemovalError] = useState<string | null>(null);
 
   const refreshInstallations = useCallback(async () => {
     try {
@@ -73,6 +78,34 @@ export function ModelLibrary({ diagnostic }: { diagnostic: DeviceDiagnostic | nu
       installations.get(model.id)?.status === 'installed' &&
       installations.get(model.id)?.sourceRevision === model.source.revision,
   ).length;
+
+  async function removeLocalModel(model: ModelManifest, installation: InstalledModel) {
+    const adapter = new TransformersTextWorkerAdapter();
+    setRemovingModelId(model.id);
+    setRemovalError(null);
+
+    let removing = transitionInstalledModel(installation, 'removing');
+    try {
+      await installedModels.put(removing);
+      const result = await adapter.deleteCache(model);
+      if (result.filesCached !== result.filesDeleted) {
+        throw new Error(
+          `Deleted ${result.filesDeleted} of ${result.filesCached} cached model files.`,
+        );
+      }
+      await installedModels.delete(model.id);
+      setConfirmRemovalId(null);
+    } catch (error) {
+      removing = transitionInstalledModel(removing, 'failed', {
+        lastError: error instanceof Error ? error.message : 'Model deletion failed.',
+      });
+      await installedModels.put(removing).catch(() => {});
+      setRemovalError(removing.lastError ?? 'Model deletion failed.');
+    } finally {
+      adapter.terminate();
+      setRemovingModelId(null);
+    }
+  }
 
   return (
     <section className="section model-library-section" id="models">
@@ -149,6 +182,52 @@ export function ModelLibrary({ diagnostic }: { diagnostic: DeviceDiagnostic | nu
               >
                 View pinned source ↗
               </a>
+              {(installationStatus === 'installed' || confirmRemovalId === model.id) &&
+              installation &&
+              model.requirements.task === 'text-generation' ? (
+                <div className="model-removal">
+                  {confirmRemovalId === model.id ? (
+                    <div className="model-removal__confirmation" role="alert">
+                      <p>
+                        Remove this model’s cached files and local install record? Workspaces using
+                        it will need to download it again.
+                      </p>
+                      <div>
+                        <button
+                          className="button button--danger"
+                          disabled={removingModelId === model.id}
+                          onClick={() => void removeLocalModel(model, installation)}
+                          type="button"
+                        >
+                          {removingModelId === model.id ? 'Removing…' : 'Remove model files'}
+                        </button>
+                        <button
+                          className="button button--quiet"
+                          disabled={removingModelId === model.id}
+                          onClick={() => setConfirmRemovalId(null)}
+                          type="button"
+                        >
+                          Keep model
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      className="model-remove-button"
+                      onClick={() => {
+                        setRemovalError(null);
+                        setConfirmRemovalId(model.id);
+                      }}
+                      type="button"
+                    >
+                      Remove local copy
+                    </button>
+                  )}
+                  {removalError && confirmRemovalId === model.id ? (
+                    <p className="model-removal__error">{removalError}</p>
+                  ) : null}
+                </div>
+              ) : null}
             </article>
           );
         })}

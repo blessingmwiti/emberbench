@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { findCuratedModel } from '../models/catalog/registry';
 import type { InstalledModel, InstalledModelStatus } from '../models/catalog/types';
 import { createInstalledModel, transitionInstalledModel } from '../models/installed-model';
-import { installedModels } from '../storage/database';
+import { INSTALLED_MODELS_CHANGED_EVENT, installedModels } from '../storage/database';
 import type { RuntimeCacheStatus, RuntimeEvent } from '../runtimes/core/types';
 import { RuntimeError } from '../runtimes/core/errors';
 import { TransformersTextWorkerAdapter } from '../runtimes/transformers/text-worker-adapter';
@@ -61,20 +61,26 @@ export function TextModelLab() {
 
   useEffect(() => {
     mountedRef.current = true;
-    void installedModels
-      .get(textModel.id)
-      .then((record) => {
-        if (mountedRef.current) {
-          setInstallRecord(record);
-        }
-      })
-      .catch(() => {
-        if (mountedRef.current) {
-          setStorageMessage('Installed-model metadata is unavailable in this browser.');
-        }
-      });
+    const refreshInstallRecord = () => {
+      void installedModels
+        .get(textModel.id)
+        .then((record) => {
+          if (mountedRef.current) {
+            setInstallRecord(record);
+          }
+        })
+        .catch(() => {
+          if (mountedRef.current) {
+            setStorageMessage('Installed-model metadata is unavailable in this browser.');
+          }
+        });
+    };
+
+    refreshInstallRecord();
+    window.addEventListener(INSTALLED_MODELS_CHANGED_EVENT, refreshInstallRecord);
     return () => {
       mountedRef.current = false;
+      window.removeEventListener(INSTALLED_MODELS_CHANGED_EVENT, refreshInstallRecord);
       adapterRef.current?.terminate();
     };
   }, []);

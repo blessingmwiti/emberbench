@@ -45,6 +45,11 @@ export interface RuntimeCacheStatus {
   }>;
 }
 
+export interface RuntimeCacheDeleteResult {
+  filesCached: number;
+  filesDeleted: number;
+}
+
 export interface RuntimeCapabilities {
   cacheInspection: boolean;
   devices: Array<'wasm' | 'webgpu'>;
@@ -98,6 +103,7 @@ export interface ModelRuntimeAdapter {
   readonly session: RuntimeSession | null;
   abort(requestId?: string): Promise<void>;
   capabilities(): RuntimeCapabilities;
+  deleteCache(manifest: ModelManifest): Promise<RuntimeCacheDeleteResult>;
   download(manifest: ModelManifest, options?: RuntimeDownloadOptions): AsyncIterable<RuntimeEvent>;
   inspect(manifest: ModelManifest): Promise<CompatibilityReport | null>;
   inspectCache(manifest: ModelManifest): Promise<RuntimeCacheStatus>;
