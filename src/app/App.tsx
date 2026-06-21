@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { formatBytes } from '../diagnostics/format';
 import { runDeviceDiagnostics } from '../diagnostics/run-device-diagnostics';
 import type { DeviceDiagnostic, DiagnosticStatus } from '../diagnostics/types';
+import { TextModelLab } from '../model-lab/TextModelLab';
 
 const workspaces = [
   {
@@ -69,6 +70,7 @@ export function App() {
         <nav aria-label="Primary navigation">
           <a href="#workspaces">Workspaces</a>
           <a href="#diagnostics">Device</a>
+          <a href="#model-lab">Model Lab</a>
           <a href="#roadmap">Roadmap</a>
         </nav>
         <div className="local-pill">
@@ -209,6 +211,8 @@ export function App() {
             ) : null}
           </div>
         </section>
+
+        <TextModelLab />
 
         <section className="section roadmap-section" id="roadmap">
           <p className="kicker">BUILD ORDER</p>

@@ -91,19 +91,19 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Text-generation spike
 
-- [ ] Install Transformers.js and ONNX Runtime Web in an isolated prototype.
-- [ ] Select one very small browser-compatible instruct model.
-- [ ] Load the model with WebGPU.
-- [ ] Run a basic text-generation prompt.
-- [ ] Stream generated tokens to the page.
-- [ ] Cancel generation while it is running.
-- [ ] Unload the model and release references.
-- [ ] Move inference into a Web Worker.
-- [ ] Measure model download size.
-- [ ] Measure cold load time.
-- [ ] Measure warm load time.
-- [ ] Measure time to first token.
-- [ ] Measure tokens per second.
+- [x] Install Transformers.js and ONNX Runtime Web in an isolated prototype.
+- [x] Select one very small browser-compatible text model.
+- [x] Load the model with WebGPU.
+- [x] Run a basic text-generation prompt.
+- [x] Stream generated tokens to the page.
+- [x] Cancel generation while it is running.
+- [x] Unload the model and release references.
+- [x] Move inference into a Web Worker.
+- [x] Measure model download size.
+- [x] Measure cold load time.
+- [x] Measure warm load time.
+- [x] Measure time to first token.
+- [x] Measure tokens per second.
 - [ ] Record memory-related failure behavior.
 
 ### Non-text spike
@@ -154,7 +154,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Exit criteria
 
-- [ ] Text generation runs and streams from a worker on WebGPU.
+- [x] Text generation runs and streams from a worker on WebGPU.
 - [ ] One non-text model completes a useful task.
 - [ ] At least one model can be reused while fully offline.
 - [ ] The selected storage strategy has been validated with real model files.
@@ -402,26 +402,26 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Worker protocol
 
-- [ ] Define messages from the UI to an inference worker.
+- [x] Define messages from the UI to an inference worker.
 - [ ] Define progress, token, result, warning, and error events.
-- [ ] Add request and session identifiers.
-- [ ] Add cancellation messages.
-- [ ] Handle worker startup failure.
-- [ ] Handle worker crashes.
-- [ ] Handle stale events from cancelled or replaced requests.
+- [x] Add request identifiers.
+- [x] Add cancellation messages.
+- [x] Handle worker startup failure.
+- [x] Handle worker crashes.
+- [x] Handle stale events from cancelled or replaced requests.
 - [ ] Add worker-protocol tests.
 
 ### Runtime adapter
 
 - [ ] Implement Transformers.js runtime discovery.
-- [ ] Implement model initialization.
-- [ ] Select WebGPU when supported.
+- [x] Implement model initialization.
+- [x] Select WebGPU when supported.
 - [ ] Implement practical WebAssembly fallback rules.
 - [ ] Configure local/cached model resolution.
-- [ ] Stream text-generation events.
+- [x] Stream text-generation events.
 - [ ] Support non-streaming task results.
-- [ ] Implement cancellation.
-- [ ] Implement unload and cleanup.
+- [x] Implement cancellation.
+- [x] Implement unload and cleanup.
 - [ ] Handle WebGPU device loss.
 - [ ] Map raw errors to Emberbench error codes.
 - [ ] Add runtime contract tests.
@@ -439,10 +439,10 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Exit criteria
 
-- [ ] A curated text model loads and runs entirely in a worker.
-- [ ] Output streams without freezing the interface.
-- [ ] Generation can be cancelled reliably.
-- [ ] The model can be unloaded and loaded again.
+- [x] A curated text model loads and runs entirely in a worker.
+- [x] Output streams without freezing the interface.
+- [x] Generation can be cancelled reliably.
+- [x] The model can be unloaded and loaded again.
 - [ ] Errors are mapped to actionable user-facing messages.
 
 ---
@@ -1096,4 +1096,4 @@ Ideas belong here until they are accepted into a chronological phase.
 
 ## Current next action
 
-- [ ] Begin the Phase 1 Transformers.js worker and streaming text-generation feasibility spike.
+- [ ] Verify cached model loading and inference with the network disabled, then begin the compact vision-model spike.

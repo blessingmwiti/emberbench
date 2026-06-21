@@ -1,0 +1,16 @@
+minimumReleaseAge: 2880
+minimumReleaseAgeStrict: true
+minimumReleaseAgeIgnoreMissingTime: false
+trustPolicy: no-downgrade
+trustPolicyIgnoreAfter: 43200
+trustLockfile: false
+blockExoticSubdeps: true
+strictDepBuilds: true
+savePrefix: ''
+verifyDepsBeforeRun: error
+
+allowBuilds:
+  esbuild: true
+  onnxruntime-node: false
+  protobufjs: false
+  sharp: false
