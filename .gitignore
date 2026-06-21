@@ -1,0 +1,33 @@
+node_modules/
+.pnpm-store/
+dist/
+coverage/
+.vite/
+.cache/
+.tmp/
+
+# Environment and local secrets
+.env
+.env.*
+!.env.example
+*.local
+*.log
+
+# TypeScript and test output
+*.tsbuildinfo
+playwright-report/
+test-results/
+
+# Editor and operating-system state
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Locally downloaded model artifacts
+models/
+model-cache/
+*.onnx
+*.safetensors
+*.gguf

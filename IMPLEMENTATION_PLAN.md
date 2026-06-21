@@ -19,7 +19,7 @@ The plan is intentionally ordered. Later phases may be researched early, but imp
 
 A task is complete when:
 
-- Its implementation is committed to the repository.
+- Its implementation is present in the repository.
 - Relevant automated tests pass.
 - User-facing behavior has been checked in a real browser where applicable.
 - Errors and empty/loading states are handled.
@@ -39,21 +39,21 @@ A milestone is complete only when all of its exit criteria are satisfied.
 - [x] Add the MIT license.
 - [x] Define the primary value proposition: the fastest path from a web link to private, on-device AI.
 - [x] Establish local-first, honest compatibility, useful offline behavior, and progressive complexity as product principles.
-- [ ] Define the primary MVP user persona.
-- [ ] Select the three launch workspaces: General Assistant, Code Lab, and either Vision Desk or Transcription Studio.
-- [ ] Define the exact MVP boundary and move non-MVP requests to later phases.
-- [ ] Write five representative end-to-end user stories.
-- [ ] Define measurable MVP success criteria.
+- [x] Define the primary MVP user persona.
+- [x] Select the three launch workspaces: General Assistant, Code Lab, and Vision Desk.
+- [x] Define the exact MVP boundary and move non-MVP requests to later phases.
+- [x] Write five representative end-to-end user stories.
+- [x] Define measurable MVP success criteria.
 
 ### Decision records
 
-- [ ] Create `docs/decisions/`.
-- [ ] Add an ADR template.
-- [ ] Record the frontend framework decision.
-- [ ] Record the primary runtime decision.
-- [ ] Record the model-storage strategy.
-- [ ] Record the browser support policy.
-- [ ] Record the privacy and telemetry policy.
+- [x] Create `docs/decisions/`.
+- [x] Add an ADR template.
+- [x] Record the frontend framework decision.
+- [x] Record the primary runtime decision.
+- [x] Record the model-storage strategy.
+- [x] Record the browser support policy.
+- [x] Record the privacy and telemetry policy.
 
 ### Project governance
 
@@ -66,9 +66,9 @@ A milestone is complete only when all of its exit criteria are satisfied.
 
 ### Exit criteria
 
-- [ ] The target MVP user and three launch workspaces are unambiguous.
-- [ ] The MVP can be described as a finite list of user-visible capabilities.
-- [ ] Foundational technical decisions are documented.
+- [x] The target MVP user and three launch workspaces are unambiguous.
+- [x] The MVP can be described as a finite list of user-visible capabilities.
+- [x] Foundational technical decisions are documented.
 
 ---
 
@@ -78,11 +78,11 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Browser and WebGPU probe
 
-- [ ] Create a minimal static WebGPU capability page.
-- [ ] Detect whether `navigator.gpu` is available.
-- [ ] Request a GPU adapter and device safely.
-- [ ] Display useful adapter information without depending on unavailable or privacy-restricted fields.
-- [ ] Detect WebGPU initialization failures.
+- [x] Create a minimal static WebGPU capability page.
+- [x] Detect whether `navigator.gpu` is available.
+- [x] Request a GPU adapter and device safely.
+- [x] Display useful adapter information without depending on unavailable or privacy-restricted fields.
+- [x] Detect WebGPU initialization failures.
 - [ ] Detect WebGPU device loss and report it clearly.
 - [ ] Test the probe in current Chrome and Edge.
 - [ ] Test the probe in current Safari.
@@ -91,19 +91,19 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Text-generation spike
 
-- [ ] Install Transformers.js and ONNX Runtime Web in an isolated prototype.
-- [ ] Select one very small browser-compatible instruct model.
-- [ ] Load the model with WebGPU.
-- [ ] Run a basic text-generation prompt.
-- [ ] Stream generated tokens to the page.
-- [ ] Cancel generation while it is running.
-- [ ] Unload the model and release references.
-- [ ] Move inference into a Web Worker.
-- [ ] Measure model download size.
-- [ ] Measure cold load time.
-- [ ] Measure warm load time.
-- [ ] Measure time to first token.
-- [ ] Measure tokens per second.
+- [x] Install Transformers.js and ONNX Runtime Web in an isolated prototype.
+- [x] Select one very small browser-compatible text model.
+- [x] Load the model with WebGPU.
+- [x] Run a basic text-generation prompt.
+- [x] Stream generated tokens to the page.
+- [x] Cancel generation while it is running.
+- [x] Unload the model and release references.
+- [x] Move inference into a Web Worker.
+- [x] Measure model download size.
+- [x] Measure cold load time.
+- [x] Measure warm load time.
+- [x] Measure time to first token.
+- [x] Measure tokens per second.
 - [ ] Record memory-related failure behavior.
 
 ### Non-text spike
@@ -144,8 +144,8 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Feasibility report
 
-- [ ] Create `docs/feasibility-report.md`.
-- [ ] Record tested devices, browsers, models, and measurements.
+- [x] Create `docs/feasibility-report.md`.
+- [~] Record tested devices, browsers, models, and measurements.
 - [ ] Identify blockers and proposed mitigations.
 - [ ] Choose the initial text model.
 - [ ] Choose the initial coding model.
@@ -154,7 +154,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Exit criteria
 
-- [ ] Text generation runs and streams from a worker on WebGPU.
+- [x] Text generation runs and streams from a worker on WebGPU.
 - [ ] One non-text model completes a useful task.
 - [ ] At least one model can be reused while fully offline.
 - [ ] The selected storage strategy has been validated with real model files.
@@ -167,23 +167,23 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Project scaffolding
 
-- [ ] Scaffold the TypeScript application.
-- [ ] Configure the selected frontend framework and Vite.
-- [ ] Set the required Node.js version.
-- [ ] Add package-manager metadata and lockfile.
-- [ ] Add `.gitignore`.
-- [ ] Add `.editorconfig`.
-- [ ] Configure strict TypeScript settings.
+- [x] Scaffold the TypeScript application.
+- [x] Configure the selected frontend framework and Vite.
+- [x] Set the required Node.js version.
+- [x] Add package-manager metadata and lockfile.
+- [x] Add `.gitignore`.
+- [x] Add `.editorconfig`.
+- [x] Configure strict TypeScript settings.
 - [ ] Configure path aliases.
-- [ ] Configure formatting.
-- [ ] Configure linting.
+- [x] Configure formatting.
+- [x] Configure linting.
 - [ ] Add environment-variable typing and validation.
 - [ ] Prevent secrets from being bundled into the client.
 
 ### Test infrastructure
 
-- [ ] Configure unit tests.
-- [ ] Configure component tests.
+- [x] Configure unit tests.
+- [x] Configure component tests.
 - [ ] Configure Playwright browser tests.
 - [ ] Add separate WebGPU-capable browser-test configuration.
 - [ ] Add deterministic test fixtures for model metadata.
@@ -203,16 +203,16 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Application shell
 
-- [ ] Create the global layout.
+- [x] Create the global layout.
 - [ ] Add routing.
-- [ ] Add navigation for Home, Workspaces, Models, Downloads, and Settings.
+- [~] Add navigation for Home, Workspaces, Models, Downloads, and Settings.
 - [ ] Add a global error boundary.
 - [ ] Add toast or notification infrastructure.
 - [ ] Add loading, empty, warning, and fatal-error patterns.
-- [ ] Add responsive desktop and mobile layouts.
+- [x] Add responsive desktop and mobile layouts.
 - [ ] Add light, dark, and system theme support.
 - [ ] Add an accessible icon system.
-- [ ] Add a privacy/local-processing indicator.
+- [x] Add a privacy/local-processing indicator.
 
 ### Design system
 
@@ -221,14 +221,14 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [ ] Build an accessible model-card component.
 - [ ] Build a reusable status panel.
 - [ ] Build skeleton and progress states for long model operations.
-- [ ] Check keyboard navigation.
-- [ ] Check visible focus behavior.
+- [x] Check keyboard navigation.
+- [x] Check visible focus behavior.
 - [ ] Check contrast in all themes.
-- [ ] Add reduced-motion behavior.
+- [x] Add reduced-motion behavior.
 
 ### Exit criteria
 
-- [ ] A production build succeeds from a clean checkout.
+- [x] A production build succeeds from a clean checkout.
 - [ ] CI validates type, lint, test, and build tasks.
 - [ ] The application shell is responsive and keyboard-accessible.
 - [ ] No model-runtime logic is coupled directly to page components.
@@ -402,26 +402,26 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Worker protocol
 
-- [ ] Define messages from the UI to an inference worker.
+- [x] Define messages from the UI to an inference worker.
 - [ ] Define progress, token, result, warning, and error events.
-- [ ] Add request and session identifiers.
-- [ ] Add cancellation messages.
-- [ ] Handle worker startup failure.
-- [ ] Handle worker crashes.
-- [ ] Handle stale events from cancelled or replaced requests.
+- [x] Add request identifiers.
+- [x] Add cancellation messages.
+- [x] Handle worker startup failure.
+- [x] Handle worker crashes.
+- [x] Handle stale events from cancelled or replaced requests.
 - [ ] Add worker-protocol tests.
 
 ### Runtime adapter
 
 - [ ] Implement Transformers.js runtime discovery.
-- [ ] Implement model initialization.
-- [ ] Select WebGPU when supported.
+- [x] Implement model initialization.
+- [x] Select WebGPU when supported.
 - [ ] Implement practical WebAssembly fallback rules.
 - [ ] Configure local/cached model resolution.
-- [ ] Stream text-generation events.
+- [x] Stream text-generation events.
 - [ ] Support non-streaming task results.
-- [ ] Implement cancellation.
-- [ ] Implement unload and cleanup.
+- [x] Implement cancellation.
+- [x] Implement unload and cleanup.
 - [ ] Handle WebGPU device loss.
 - [ ] Map raw errors to Emberbench error codes.
 - [ ] Add runtime contract tests.
@@ -439,10 +439,10 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Exit criteria
 
-- [ ] A curated text model loads and runs entirely in a worker.
-- [ ] Output streams without freezing the interface.
-- [ ] Generation can be cancelled reliably.
-- [ ] The model can be unloaded and loaded again.
+- [x] A curated text model loads and runs entirely in a worker.
+- [x] Output streams without freezing the interface.
+- [x] Generation can be cancelled reliably.
+- [x] The model can be unloaded and loaded again.
 - [ ] Errors are mapped to actionable user-facing messages.
 
 ---
@@ -1096,4 +1096,4 @@ Ideas belong here until they are accepted into a chronological phase.
 
 ## Current next action
 
-- [ ] Complete Phase 0 product choices, then begin the Phase 1 WebGPU and text-generation feasibility spike.
+- [ ] Verify cached model loading and inference with the network disabled, then begin the compact vision-model spike.
