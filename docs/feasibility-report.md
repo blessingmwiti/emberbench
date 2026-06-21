@@ -170,4 +170,4 @@ An explicit runtime probe then downloaded the pinned SmolLM2 revision, initializ
 
 ## Next experiment
 
-Implement the first Transformers.js adapter against the common contract.
+Migrate Text Model Lab to consume the shared runtime adapter.

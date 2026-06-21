@@ -1096,4 +1096,5 @@ Ideas belong here until they are accepted into a chronological phase.
 
 ## Current next action
 
-- [ ] Implement the first Transformers.js adapter against the common contract.
+- [x] Implement the first Transformers.js adapter against the common contract.
+- [ ] Migrate Text Model Lab to consume the shared runtime adapter.

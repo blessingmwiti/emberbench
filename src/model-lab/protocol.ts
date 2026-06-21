@@ -5,11 +5,17 @@ export interface ModelCacheFile {
   file: string;
 }
 
+export interface TextModelWorkerConfig {
+  dtype?: 'fp16' | 'fp32' | 'q4' | 'q4f16' | 'q8';
+  modelId?: string;
+  revision?: string;
+}
+
 export type TextModelWorkerRequest =
-  | {
+  | (TextModelWorkerConfig & {
       cachedFilesOnly?: boolean;
       type: 'load';
-    }
+    })
   | {
       maxNewTokens: number;
       prompt: string;
@@ -19,9 +25,9 @@ export type TextModelWorkerRequest =
   | {
       type: 'cancel';
     }
-  | {
+  | (TextModelWorkerConfig & {
       type: 'inspect-cache';
-    }
+    })
   | {
       type: 'unload';
     };
