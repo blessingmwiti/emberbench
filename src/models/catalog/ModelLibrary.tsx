@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { formatBytes } from '../../diagnostics/format';
+import {
+  compareModelWithDevice,
+  recommendDeviceTier,
+  type ModelDeviceFit,
+} from '../../diagnostics/recommend-device-tier';
+import type { DeviceDiagnostic } from '../../diagnostics/types';
 import type { InstalledModel, ModelManifest } from './types';
 import { INSTALLED_MODELS_CHANGED_EVENT, installedModels } from '../../storage/database';
 import { getCuratedModels, getModelDownloadSize } from './registry';
@@ -27,7 +33,14 @@ function readInstallLabel(model: ModelManifest, installed: InstalledModel | unde
   }
 }
 
-export function ModelLibrary() {
+const DEVICE_FIT_LABELS: Record<ModelDeviceFit, string> = {
+  recommended: 'Recommended for this device',
+  'exceeds-tier': 'Above recommended tier',
+  'insufficient-storage': 'Not enough browser storage',
+  unsupported: 'WebGPU unavailable',
+};
+
+export function ModelLibrary({ diagnostic }: { diagnostic: DeviceDiagnostic | null }) {
   const [installations, setInstallations] = useState<Map<string, InstalledModel>>(new Map());
   const [storageAvailable, setStorageAvailable] = useState(true);
 
@@ -54,6 +67,7 @@ export function ModelLibrary() {
   }, [refreshInstallations]);
 
   const curatedModels = getCuratedModels();
+  const deviceTier = recommendDeviceTier(diagnostic);
   const installedCount = curatedModels.filter(
     (model) =>
       installations.get(model.id)?.status === 'installed' &&
@@ -83,6 +97,7 @@ export function ModelLibrary() {
           const installation = installations.get(model.id);
           const installationStatus =
             installation?.sourceRevision === model.source.revision ? installation.status : 'none';
+          const deviceFit = compareModelWithDevice(model, diagnostic, deviceTier);
 
           return (
             <article className="model-library-card" key={model.id}>
@@ -96,6 +111,9 @@ export function ModelLibrary() {
               >
                 <span aria-hidden="true">●</span>
                 {readInstallLabel(model, installation)}
+              </div>
+              <div className={`model-device-fit model-device-fit--${deviceFit ?? 'checking'}`}>
+                {deviceFit ? DEVICE_FIT_LABELS[deviceFit] : 'Checking device fit'}
               </div>
               <h3>{model.name}</h3>
               <p>{model.description}</p>

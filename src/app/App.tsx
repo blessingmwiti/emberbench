@@ -6,6 +6,7 @@ import {
   runDeviceDiagnostics,
 } from '../diagnostics/run-device-diagnostics';
 import type { DeviceDiagnostic, DiagnosticStatus } from '../diagnostics/types';
+import { recommendDeviceTier } from '../diagnostics/recommend-device-tier';
 import { ModelImporter } from '../models/importer/ModelImporter';
 import { ModelLibrary } from '../models/catalog/ModelLibrary';
 import { TextModelLab } from '../model-lab/TextModelLab';
@@ -87,6 +88,7 @@ export function App() {
           : status === 'error'
             ? 'Diagnostics need attention'
             : 'Not checked yet';
+  const deviceRecommendation = recommendDeviceTier(diagnostic);
 
   return (
     <div className="app-shell">
@@ -164,7 +166,7 @@ export function App() {
           </div>
         </section>
 
-        <ModelLibrary />
+        <ModelLibrary diagnostic={diagnostic} />
 
         <section className="section diagnostics-section" id="diagnostics">
           <div className="diagnostic-copy">
@@ -234,6 +236,36 @@ export function App() {
                 <dd>{diagnostic ? diagnostic.webGpu.featureCount : 'Checking…'}</dd>
               </div>
               <div>
+                <dt>FP16 shaders</dt>
+                <dd>
+                  {diagnostic
+                    ? diagnostic.webGpu.features.includes('shader-f16')
+                      ? 'Available'
+                      : 'Not exposed'
+                    : 'Checking…'}
+                </dd>
+              </div>
+              <div>
+                <dt>Device tier</dt>
+                <dd>{deviceRecommendation ? deviceRecommendation.tier : 'Checking…'}</dd>
+              </div>
+              <div>
+                <dt>Runtime paths</dt>
+                <dd>
+                  {diagnostic
+                    ? diagnostic.runtime.supportedPaths.join(', ') || 'None'
+                    : 'Checking…'}
+                </dd>
+              </div>
+              <div>
+                <dt>Browser</dt>
+                <dd>{diagnostic?.browser.browser ?? 'Checking…'}</dd>
+              </div>
+              <div>
+                <dt>Platform</dt>
+                <dd>{diagnostic?.browser.platform ?? 'Checking…'}</dd>
+              </div>
+              <div>
                 <dt>Storage used</dt>
                 <dd>{formatBytes(diagnostic?.storage.usageBytes ?? null)}</dd>
               </div>
@@ -255,6 +287,18 @@ export function App() {
 
             {diagnostic?.webGpu.error ? (
               <p className="diagnostic-error">{diagnostic.webGpu.error}</p>
+            ) : null}
+            {deviceRecommendation ? (
+              <p className="diagnostic-recommendation">
+                <strong>{deviceRecommendation.tier} tier.</strong> {deviceRecommendation.reason}
+                {' Exact usable GPU memory is not exposed or estimated.'}
+              </p>
+            ) : null}
+            {deviceRecommendation?.tier === 'unsupported' ? (
+              <p className="diagnostic-guidance">
+                Try an up-to-date browser with WebGPU enabled, current graphics drivers, and a
+                secure HTTPS or localhost origin.
+              </p>
             ) : null}
           </div>
         </section>

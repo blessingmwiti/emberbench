@@ -43,6 +43,19 @@ async function collect<T>(events: AsyncIterable<T>) {
 }
 
 describe('TransformersTextWorkerAdapter', () => {
+  it('describes its runtime capabilities without starting a model', () => {
+    const adapter = new TransformersTextWorkerAdapter(() => new FakeWorker());
+
+    expect(adapter.capabilities()).toEqual({
+      cacheInspection: true,
+      devices: ['webgpu'],
+      inputKinds: ['text'],
+      runtime: 'transformers-js',
+      streaming: true,
+      tasks: ['text-generation'],
+    });
+  });
+
   it('loads the pinned manifest configuration and streams generation events', async () => {
     const worker = new FakeWorker();
     const adapter = new TransformersTextWorkerAdapter(() => worker);

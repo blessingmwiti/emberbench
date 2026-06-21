@@ -413,6 +413,22 @@ h2 {
   color: var(--ember);
 }
 
+.model-device-fit {
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.model-device-fit--recommended {
+  color: var(--green);
+}
+
+.model-device-fit--exceeds-tier,
+.model-device-fit--insufficient-storage,
+.model-device-fit--unsupported {
+  color: var(--gold);
+}
+
 .model-library-card__header {
   display: flex;
   justify-content: space-between;
@@ -626,6 +642,23 @@ h2 {
   border-top: 1px solid #713c2c;
   color: var(--ember-light);
   font-size: 13px;
+}
+
+.diagnostic-recommendation,
+.diagnostic-guidance {
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.diagnostic-recommendation strong {
+  color: var(--gold);
+  text-transform: capitalize;
+}
+
+.diagnostic-guidance {
+  color: var(--gold);
 }
 
 .model-lab-heading {

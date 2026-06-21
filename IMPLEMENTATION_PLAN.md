@@ -260,7 +260,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [x] Define runtime error codes.
 - [x] Define cancellation semantics.
 - [x] Define session and resource ownership.
-- [ ] Define runtime capability discovery.
+- [x] Define runtime capability discovery.
 - [x] Add initial runtime contract tests.
 
 ### Curated model registry
@@ -299,41 +299,41 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Capability detection
 
-- [ ] Detect WebGPU availability.
-- [ ] Detect WebAssembly fallback availability.
-- [ ] Capture browser and platform details conservatively.
-- [ ] Request adapter/device only when required.
-- [ ] Detect known runtime-required WebGPU features.
-- [ ] Detect available storage and storage quota.
-- [ ] Detect persistent-storage status.
-- [ ] Detect online/offline state.
-- [ ] Avoid claiming exact available VRAM when the browser cannot expose it.
+- [x] Detect WebGPU availability.
+- [x] Detect WebAssembly fallback availability.
+- [x] Capture browser and platform details conservatively.
+- [x] Request adapter/device only when required.
+- [x] Detect known runtime-required WebGPU features.
+- [x] Detect available storage and storage quota.
+- [x] Detect persistent-storage status.
+- [x] Detect online/offline state.
+- [x] Avoid claiming exact available VRAM when the browser cannot expose it.
 
 ### Device tiers
 
-- [ ] Define Basic, Standard, and Performance device tiers.
-- [ ] Define an Unsupported/Fallback state.
-- [ ] Map static model requirements to tiers.
+- [x] Define Basic, Standard, and Performance device tiers.
+- [x] Define an Unsupported/Fallback state.
+- [x] Map static model requirements to tiers.
 - [x] Add a lightweight opt-in runtime initialization probe.
 - [ ] Combine probe results with conservative model estimates.
-- [ ] Explain why a device received its tier.
+- [x] Explain why a device received its tier.
 - [ ] Allow advanced users to override recommendations with a warning.
 
 ### Diagnostics interface
 
-- [ ] Build the diagnostics page.
-- [ ] Show WebGPU status.
-- [ ] Show storage availability and persistence.
-- [ ] Show supported runtime paths.
-- [ ] Show device tier.
-- [ ] Show browser-specific guidance.
+- [x] Build the diagnostics page.
+- [x] Show WebGPU status.
+- [x] Show storage availability and persistence.
+- [x] Show supported runtime paths.
+- [x] Show device tier.
+- [x] Show browser-specific guidance.
 - [ ] Add copyable diagnostic details with no private content.
-- [ ] Add a re-run diagnostics action.
+- [x] Add a re-run diagnostics action.
 
 ### Exit criteria
 
-- [ ] Unsupported users receive clear next steps instead of a broken model load.
-- [ ] Every curated model can be compared with the current device.
+- [x] Unsupported users receive clear next steps instead of a broken model load.
+- [x] Every curated model can be compared with the current device.
 - [ ] Storage and memory statements are clearly labeled as measured or estimated.
 
 ---
@@ -1100,4 +1100,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Migrate Text Model Lab to consume the shared runtime adapter.
 - [x] Add persistent installed-model records and lifecycle state.
 - [x] Surface installed-model state in the curated model library.
-- [ ] Add runtime capability discovery and device-tier recommendations.
+- [x] Add runtime capability discovery and device-tier recommendations.
+- [ ] Add model deletion with cache and metadata cleanup.

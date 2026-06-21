@@ -8,6 +8,14 @@ import type { ModelRuntimeAdapter } from './types';
 function createAdapter(): ModelRuntimeAdapter {
   return {
     abort: async () => {},
+    capabilities: () => ({
+      cacheInspection: true,
+      devices: ['webgpu'],
+      inputKinds: ['text'],
+      runtime: 'fake',
+      streaming: true,
+      tasks: ['text-generation'],
+    }),
     async *download() {},
     id: 'fake',
     inspect: () => Promise.resolve(null),

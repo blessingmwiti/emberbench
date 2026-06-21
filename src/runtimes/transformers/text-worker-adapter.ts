@@ -12,6 +12,7 @@ import type {
   RuntimeLoadOptions,
   RuntimeRunOptions,
   RuntimeCacheStatus,
+  RuntimeCapabilities,
   RuntimeSession,
 } from '../core/types';
 
@@ -83,6 +84,17 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
         new RuntimeError('INITIALIZATION_FAILED', 'The model worker stopped unexpectedly.'),
       );
     });
+  }
+
+  capabilities(): RuntimeCapabilities {
+    return {
+      cacheInspection: true,
+      devices: ['webgpu'],
+      inputKinds: ['text'],
+      runtime: 'transformers-js',
+      streaming: true,
+      tasks: ['text-generation'],
+    };
   }
 
   abort(requestId?: string): Promise<void> {

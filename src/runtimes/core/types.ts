@@ -45,6 +45,15 @@ export interface RuntimeCacheStatus {
   }>;
 }
 
+export interface RuntimeCapabilities {
+  cacheInspection: boolean;
+  devices: Array<'wasm' | 'webgpu'>;
+  inputKinds: ModelInput['kind'][];
+  runtime: string;
+  streaming: boolean;
+  tasks: string[];
+}
+
 export type RuntimeEvent =
   | {
       loadedBytes?: number;
@@ -88,6 +97,7 @@ export interface ModelRuntimeAdapter {
   readonly id: string;
   readonly session: RuntimeSession | null;
   abort(requestId?: string): Promise<void>;
+  capabilities(): RuntimeCapabilities;
   download(manifest: ModelManifest, options?: RuntimeDownloadOptions): AsyncIterable<RuntimeEvent>;
   inspect(manifest: ModelManifest): Promise<CompatibilityReport | null>;
   inspectCache(manifest: ModelManifest): Promise<RuntimeCacheStatus>;

@@ -170,4 +170,4 @@ An explicit runtime probe then downloaded the pinned SmolLM2 revision, initializ
 
 ## Next experiment
 
-Add runtime capability discovery and device-tier recommendations.
+Add model deletion with cache and metadata cleanup.
