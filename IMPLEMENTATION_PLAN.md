@@ -247,21 +247,21 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [x] Define `RuntimeRequirement`.
 - [x] Define `CompatibilityReport`.
 - [ ] Define `InstalledModel`.
-- [ ] Define `ModelSession`.
-- [ ] Define serializable model input and output event types.
+- [x] Define `ModelSession`.
+- [x] Define serializable model input and output event types.
 - [x] Version model manifest schemas from the beginning.
 
 ### Runtime contract
 
-- [ ] Define the common runtime adapter interface.
-- [ ] Define inspect, download, load, run, abort, and unload behavior.
-- [ ] Define streaming event semantics.
-- [ ] Define progress event semantics.
-- [ ] Define runtime error codes.
-- [ ] Define cancellation semantics.
-- [ ] Define session and resource ownership.
+- [x] Define the common runtime adapter interface.
+- [x] Define inspect, download, load, run, abort, and unload behavior.
+- [x] Define streaming event semantics.
+- [x] Define progress event semantics.
+- [x] Define runtime error codes.
+- [x] Define cancellation semantics.
+- [x] Define session and resource ownership.
 - [ ] Define runtime capability discovery.
-- [ ] Add contract tests that every adapter must pass.
+- [x] Add initial runtime contract tests.
 
 ### Curated model registry
 
@@ -1096,4 +1096,4 @@ Ideas belong here until they are accepted into a chronological phase.
 
 ## Current next action
 
-- [ ] Define the common runtime adapter contract and error semantics.
+- [ ] Implement the first Transformers.js adapter against the common contract.

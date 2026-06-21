@@ -170,4 +170,4 @@ An explicit runtime probe then downloaded the pinned SmolLM2 revision, initializ
 
 ## Next experiment
 
-Define the common runtime adapter contract and error semantics.
+Implement the first Transformers.js adapter against the common contract.
