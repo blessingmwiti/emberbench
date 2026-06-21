@@ -558,6 +558,32 @@ h2 {
   color: var(--ember);
 }
 
+.download-warning {
+  margin: 16px 0;
+  padding: 14px;
+  border: 1px solid #5d4930;
+  border-radius: 4px;
+  background: rgb(201 143 53 / 7%);
+}
+
+.download-warning p {
+  margin: 0 0 12px;
+  color: var(--gold);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.download-warning > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.download-warning .button {
+  padding: 9px 12px;
+  font-size: 9px;
+}
+
 .coming-soon {
   color: var(--gold);
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;

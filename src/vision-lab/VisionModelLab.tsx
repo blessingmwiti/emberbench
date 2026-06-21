@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { formatBytes } from '../diagnostics/format';
 import { findCuratedModel } from '../models/catalog/registry';
 import type { InstalledModel, InstalledModelStatus } from '../models/catalog/types';
 import { createInstalledModel, transitionInstalledModel } from '../models/installed-model';
@@ -7,6 +8,7 @@ import { RuntimeError } from '../runtimes/core/errors';
 import type { RuntimeCacheStatus, RuntimeEvent } from '../runtimes/core/types';
 import { TransformersVisionWorkerAdapter } from '../runtimes/transformers/vision-worker-adapter';
 import { INSTALLED_MODELS_CHANGED_EVENT, installedModels } from '../storage/database';
+import { runDownloadPreflight } from '../storage/download-preflight';
 
 type VisionStatus = 'idle' | 'loading' | 'ready' | 'running' | 'cancelling' | 'error';
 
@@ -48,6 +50,7 @@ export function VisionModelLab() {
   const [cacheInspected, setCacheInspected] = useState(false);
   const [installRecord, setInstallRecord] = useState<InstalledModel | null>(null);
   const [storageMessage, setStorageMessage] = useState<string | null>(null);
+  const [downloadWarning, setDownloadWarning] = useState<string | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -131,7 +134,28 @@ export function VisionModelLab() {
     }
   }
 
-  async function loadModel() {
+  async function loadModel(preflightApproved = false) {
+    if (!cachedFilesOnly && !preflightApproved) {
+      const preflight = await runDownloadPreflight(visionModel);
+      const detail = `${preflight.message} Estimated need: ${formatBytes(preflight.requiredBytes)}${
+        preflight.availableBytes === null
+          ? ''
+          : `; available: ${formatBytes(preflight.availableBytes)}`
+      }.`;
+      if (preflight.status === 'blocked') {
+        setError(detail);
+        return;
+      }
+      if (preflight.status === 'warning') {
+        setDownloadWarning(detail);
+        return;
+      }
+      if (preflight.status === 'unknown') {
+        setStorageMessage(detail);
+      }
+    }
+
+    setDownloadWarning(null);
     const adapter = ensureAdapter();
     const startedAt = performance.now();
     let record = beginRecord(
@@ -410,6 +434,28 @@ export function VisionModelLab() {
               </button>
             ) : null}
           </div>
+
+          {downloadWarning ? (
+            <div className="download-warning" role="alert">
+              <p>{downloadWarning}</p>
+              <div>
+                <button
+                  className="button button--primary"
+                  onClick={() => void loadModel(true)}
+                  type="button"
+                >
+                  Continue download
+                </button>
+                <button
+                  className="button button--quiet"
+                  onClick={() => setDownloadWarning(null)}
+                  type="button"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : null}
 
           <label className="local-only-control">
             <input

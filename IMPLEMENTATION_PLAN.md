@@ -372,8 +372,8 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [ ] Implement retry with bounded backoff.
 - [ ] Implement resume where technically supported.
 - [ ] Preserve understandable state after page reload.
-- [ ] Check available storage before starting.
-- [ ] Warn about metered or very large downloads where detectable.
+- [x] Check available storage before starting.
+- [x] Warn about metered or very large downloads where detectable.
 - [ ] Handle offline transitions during download.
 - [ ] Handle server and CORS failures.
 - [ ] Prevent two downloads from writing the same model simultaneously.
@@ -1103,4 +1103,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Add runtime capability discovery and device-tier recommendations.
 - [x] Add model deletion with cache and metadata cleanup for the text runtime.
 - [x] Add equivalent cache lifecycle support to the vision runtime adapter.
-- [ ] Add storage preflight checks before model downloads.
+- [x] Add storage preflight checks before model downloads.
+- [ ] Add model-installation repair and stale-record reconciliation.

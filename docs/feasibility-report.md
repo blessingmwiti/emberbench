@@ -170,4 +170,4 @@ An explicit runtime probe then downloaded the pinned SmolLM2 revision, initializ
 
 ## Next experiment
 
-Add storage preflight checks before model downloads.
+Add model-installation repair and stale-record reconciliation.
