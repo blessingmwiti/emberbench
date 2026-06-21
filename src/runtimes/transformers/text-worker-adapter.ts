@@ -11,6 +11,7 @@ import type {
   RuntimeEvent,
   RuntimeLoadOptions,
   RuntimeRunOptions,
+  RuntimeCacheStatus,
   RuntimeSession,
 } from '../core/types';
 
@@ -57,6 +58,10 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
   readonly id = 'transformers-js/text-worker';
   private activeRequestId: string | null = null;
   private currentManifest: ModelManifest | null = null;
+  private cachePromise: {
+    reject: (reason?: unknown) => void;
+    resolve: (status: RuntimeCacheStatus) => void;
+  } | null = null;
   private downloadQueue: AsyncEventQueue<RuntimeEvent> | null = null;
   private loadPromise: {
     reject: (reason?: unknown) => void;
@@ -127,6 +132,25 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
   inspect(manifest: ModelManifest): Promise<null> {
     this.assertSupportedManifest(manifest);
     return Promise.resolve(null);
+  }
+
+  inspectCache(manifest: ModelManifest): Promise<RuntimeCacheStatus> {
+    try {
+      this.assertSupportedManifest(manifest);
+      if (this.cachePromise) {
+        throw new RuntimeError('ALREADY_RUNNING', 'A cache inspection is already running.', {
+          recoverable: true,
+        });
+      }
+
+      const inspecting = new Promise<RuntimeCacheStatus>((resolve, reject) => {
+        this.cachePromise = { reject, resolve };
+      });
+      this.worker.postMessage({ ...toWorkerConfig(manifest), type: 'inspect-cache' });
+      return inspecting;
+    } catch (error) {
+      return Promise.reject(toRuntimeError(error, 'INITIALIZATION_FAILED'));
+    }
   }
 
   load(manifest: ModelManifest, options: RuntimeLoadOptions = {}): Promise<RuntimeSession> {
@@ -231,6 +255,8 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
   private failPending(error: RuntimeError) {
     this.downloadQueue?.fail(error);
     this.downloadQueue = null;
+    this.cachePromise?.reject(error);
+    this.cachePromise = null;
     this.runQueue?.fail(error);
     this.runQueue = null;
     this.loadPromise?.reject(error);
@@ -278,7 +304,9 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
         if (message.requestId === this.activeRequestId) {
           this.runQueue?.push({
             durationMs: message.durationMs,
+            firstTokenMs: message.firstTokenMs,
             requestId: message.requestId,
+            tokenCount: message.tokenCount,
             type: 'complete',
           });
           this.finishRun();
@@ -312,6 +340,11 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
         this.unloadPromise = null;
         break;
       case 'cache-status':
+        this.cachePromise?.resolve({
+          cached: message.cached,
+          files: message.files,
+        });
+        this.cachePromise = null;
         break;
     }
   }

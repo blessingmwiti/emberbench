@@ -37,6 +37,14 @@ export interface RuntimeRunOptions {
   requestId: string;
 }
 
+export interface RuntimeCacheStatus {
+  cached: boolean;
+  files: Array<{
+    cached: boolean;
+    file: string;
+  }>;
+}
+
 export type RuntimeEvent =
   | {
       loadedBytes?: number;
@@ -62,7 +70,9 @@ export type RuntimeEvent =
     }
   | {
       durationMs: number;
+      firstTokenMs?: number | null;
       requestId: string;
+      tokenCount?: number;
       type: 'complete';
     };
 
@@ -80,6 +90,7 @@ export interface ModelRuntimeAdapter {
   abort(requestId?: string): Promise<void>;
   download(manifest: ModelManifest, options?: RuntimeDownloadOptions): AsyncIterable<RuntimeEvent>;
   inspect(manifest: ModelManifest): Promise<CompatibilityReport | null>;
+  inspectCache(manifest: ModelManifest): Promise<RuntimeCacheStatus>;
   load(manifest: ModelManifest, options?: RuntimeLoadOptions): Promise<RuntimeSession>;
   run(input: ModelInput, options: RuntimeRunOptions): AsyncIterable<RuntimeEvent>;
   unload(): Promise<void>;

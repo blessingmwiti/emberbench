@@ -127,6 +127,16 @@ async function getGenerator(config = defaultConfig, cachedFilesOnly = false) {
   }
 }
 
+async function getLoadedGenerator() {
+  if (generator) {
+    return generator;
+  }
+  if (generatorPromise) {
+    return generatorPromise;
+  }
+  return getGenerator();
+}
+
 async function generate(request: Extract<TextModelWorkerRequest, { type: 'generate' }>) {
   if (activeRequestId) {
     post({
@@ -142,7 +152,7 @@ async function generate(request: Extract<TextModelWorkerRequest, { type: 'genera
   stoppingCriteria.reset();
 
   try {
-    const activeGenerator = await getGenerator();
+    const activeGenerator = await getLoadedGenerator();
     const startedAt = performance.now();
     let firstTokenAt: number | null = null;
     let tokenCount = 0;

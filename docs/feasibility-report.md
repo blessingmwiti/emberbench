@@ -170,4 +170,4 @@ An explicit runtime probe then downloaded the pinned SmolLM2 revision, initializ
 
 ## Next experiment
 
-Migrate Text Model Lab to consume the shared runtime adapter.
+Add persistent installed-model records and lifecycle state.

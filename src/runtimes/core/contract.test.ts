@@ -11,6 +11,7 @@ function createAdapter(): ModelRuntimeAdapter {
     async *download() {},
     id: 'fake',
     inspect: () => Promise.resolve(null),
+    inspectCache: () => Promise.resolve({ cached: false, files: [] }),
     load: (manifest) => Promise.resolve(createRuntimeSession(manifest.id)),
     async *run() {},
     session: null,

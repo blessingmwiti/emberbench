@@ -1,11 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 
-import {
-  TEXT_SPIKE_MODEL,
-  type ModelCacheFile,
-  type TextModelWorkerEvent,
-  type TextModelWorkerRequest,
-} from './protocol';
+import { findCuratedModel } from '../models/catalog/registry';
+import type { RuntimeCacheStatus, RuntimeEvent } from '../runtimes/core/types';
+import { RuntimeError } from '../runtimes/core/errors';
+import { TransformersTextWorkerAdapter } from '../runtimes/transformers/text-worker-adapter';
 
 type LabStatus = 'idle' | 'loading' | 'ready' | 'generating' | 'cancelling' | 'error';
 
@@ -16,6 +14,13 @@ interface Metrics {
 }
 
 const initialPrompt = 'Once upon a time, a tiny ember learned how to';
+const curatedTextModel = findCuratedModel('smollm2-135m-q4');
+
+if (!curatedTextModel) {
+  throw new Error('The curated Text Model Lab model is missing.');
+}
+
+const textModel = curatedTextModel;
 
 function formatDuration(milliseconds: number | null) {
   if (milliseconds === null) {
@@ -27,13 +32,14 @@ function formatDuration(milliseconds: number | null) {
     : `${milliseconds.toFixed(0)} ms`;
 }
 
-function readProgress(data: Record<string, unknown>) {
-  return typeof data.progress === 'number' ? data.progress : null;
+function displayRuntimeError(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
 }
 
 export function TextModelLab() {
-  const workerRef = useRef<Worker | null>(null);
+  const adapterRef = useRef<TransformersTextWorkerAdapter | null>(null);
   const activeRequestRef = useRef<string | null>(null);
+  const mountedRef = useRef(true);
   const [status, setStatus] = useState<LabStatus>('idle');
   const [prompt, setPrompt] = useState(initialPrompt);
   const [output, setOutput] = useState('');
@@ -41,104 +47,73 @@ export function TextModelLab() {
   const [loadTimeMs, setLoadTimeMs] = useState<number | null>(null);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [cached, setCached] = useState<boolean | null>(null);
-  const [cacheFiles, setCacheFiles] = useState<ModelCacheFile[]>([]);
+  const [cacheStatus, setCacheStatus] = useState<RuntimeCacheStatus>({
+    cached: false,
+    files: [],
+  });
+  const [cacheInspected, setCacheInspected] = useState(false);
   const [cachedFilesOnly, setCachedFilesOnly] = useState(false);
 
-  useEffect(
-    () => () => {
-      workerRef.current?.terminate();
-    },
-    [],
-  );
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      adapterRef.current?.terminate();
+    };
+  }, []);
 
-  function ensureWorker() {
-    if (workerRef.current) {
-      return workerRef.current;
-    }
+  function ensureAdapter() {
+    adapterRef.current ??= new TransformersTextWorkerAdapter();
+    return adapterRef.current;
+  }
 
-    const worker = new Worker(new URL('./text-generation.worker.ts', import.meta.url), {
-      type: 'module',
-    });
-
-    worker.addEventListener('message', (event: MessageEvent<TextModelWorkerEvent>) => {
-      const message = event.data;
-
-      switch (message.type) {
-        case 'cache-status':
-          setCached(message.cached);
-          setCacheFiles(message.files);
-          break;
-        case 'progress': {
-          const nextProgress = readProgress(message.data);
-          if (nextProgress !== null) {
-            setProgress(nextProgress);
-          }
-          break;
-        }
-        case 'ready':
-          setLoadTimeMs((current) => (message.loadTimeMs > 0 ? message.loadTimeMs : current));
-          setProgress(100);
-          setStatus((current) => (current === 'loading' ? 'ready' : current));
-          break;
-        case 'token':
-          if (message.requestId === activeRequestRef.current) {
-            setOutput((current) => current + message.text);
-          }
-          break;
-        case 'complete':
-          if (message.requestId === activeRequestRef.current) {
-            setMetrics(message);
-            activeRequestRef.current = null;
-            setStatus('ready');
-          }
-          break;
-        case 'cancelled':
-          if (message.requestId === activeRequestRef.current) {
-            activeRequestRef.current = null;
-            setStatus('ready');
-          }
-          break;
-        case 'error':
-          if (!message.requestId || message.requestId === activeRequestRef.current) {
-            activeRequestRef.current = null;
-            setError(message.message);
-            setStatus('error');
-          }
-          break;
-        case 'unloaded':
-          activeRequestRef.current = null;
-          setLoadTimeMs(null);
-          setMetrics(null);
-          setOutput('');
-          setProgress(null);
-          setStatus('idle');
-          break;
+  async function inspectCache() {
+    try {
+      const nextStatus = await ensureAdapter().inspectCache(textModel);
+      if (mountedRef.current) {
+        setCacheStatus(nextStatus);
+        setCacheInspected(true);
       }
-    });
-
-    worker.addEventListener('error', () => {
-      activeRequestRef.current = null;
-      setError('The model worker stopped unexpectedly.');
-      setStatus('error');
-    });
-
-    workerRef.current = worker;
-    return worker;
+    } catch (inspectionError) {
+      if (mountedRef.current) {
+        setError(displayRuntimeError(inspectionError, 'Model cache inspection failed.'));
+      }
+    }
   }
 
-  function post(request: TextModelWorkerRequest) {
-    ensureWorker().postMessage(request);
-  }
-
-  function loadModel() {
+  async function loadModel() {
+    const adapter = ensureAdapter();
+    const startedAt = performance.now();
     setError(null);
     setProgress(0);
     setStatus('loading');
-    post({ cachedFilesOnly, type: 'load' });
+
+    try {
+      if (!cachedFilesOnly) {
+        for await (const event of adapter.download(textModel)) {
+          if (event.type === 'progress' && mountedRef.current) {
+            setProgress(event.progress * 100);
+          }
+        }
+      }
+
+      await adapter.load(textModel, { cachedFilesOnly });
+      if (!mountedRef.current) {
+        return;
+      }
+      setLoadTimeMs(performance.now() - startedAt);
+      setProgress(100);
+      setStatus('ready');
+      await inspectCache();
+    } catch (loadError) {
+      if (mountedRef.current) {
+        setError(displayRuntimeError(loadError, 'Model loading failed.'));
+        setStatus('error');
+      }
+    }
   }
 
-  function generate() {
+  async function generate() {
     const normalizedPrompt = prompt.trim();
     if (!normalizedPrompt) {
       setError('Enter a prompt before generating.');
@@ -151,21 +126,70 @@ export function TextModelLab() {
     setMetrics(null);
     setOutput('');
     setStatus('generating');
-    post({
-      maxNewTokens: 64,
-      prompt: normalizedPrompt,
-      requestId,
-      type: 'generate',
-    });
+
+    try {
+      for await (const event of ensureAdapter().run(
+        { kind: 'text', text: normalizedPrompt },
+        { maxNewTokens: 64, requestId },
+      )) {
+        if (!mountedRef.current || requestId !== activeRequestRef.current) {
+          continue;
+        }
+        handleRunEvent(event);
+      }
+      if (mountedRef.current && requestId === activeRequestRef.current) {
+        activeRequestRef.current = null;
+        setStatus('ready');
+      }
+    } catch (generationError) {
+      if (!mountedRef.current || requestId !== activeRequestRef.current) {
+        return;
+      }
+      activeRequestRef.current = null;
+      if (generationError instanceof RuntimeError && generationError.code === 'ABORTED') {
+        setStatus('ready');
+      } else {
+        setError(displayRuntimeError(generationError, 'Text generation failed.'));
+        setStatus('error');
+      }
+    }
   }
 
-  function cancel() {
+  function handleRunEvent(event: RuntimeEvent) {
+    if (event.type === 'token') {
+      setOutput((current) => current + event.text);
+    }
+    if (event.type === 'complete') {
+      setMetrics({
+        durationMs: event.durationMs,
+        firstTokenMs: event.firstTokenMs ?? null,
+        tokenCount: event.tokenCount ?? 0,
+      });
+    }
+  }
+
+  async function cancel() {
     setStatus('cancelling');
-    post({ type: 'cancel' });
+    await ensureAdapter().abort(activeRequestRef.current ?? undefined);
   }
 
-  function unload() {
-    post({ type: 'unload' });
+  async function unload() {
+    try {
+      await ensureAdapter().unload();
+      if (mountedRef.current) {
+        activeRequestRef.current = null;
+        setLoadTimeMs(null);
+        setMetrics(null);
+        setOutput('');
+        setProgress(null);
+        setStatus('idle');
+      }
+    } catch (unloadError) {
+      if (mountedRef.current) {
+        setError(displayRuntimeError(unloadError, 'Model unloading failed.'));
+        setStatus('error');
+      }
+    }
   }
 
   const busy = status === 'loading' || status === 'generating' || status === 'cancelling';
@@ -188,7 +212,7 @@ export function TextModelLab() {
       <div className="model-lab-grid">
         <div className="model-console">
           <div className="model-console__bar">
-            <span>{TEXT_SPIKE_MODEL}</span>
+            <span>{textModel.source.modelId}</span>
             <span className={`model-state model-state--${status}`}>{status}</span>
           </div>
 
@@ -203,7 +227,11 @@ export function TextModelLab() {
 
           <div className="model-actions">
             {!modelReady && status !== 'loading' ? (
-              <button className="button button--primary" onClick={loadModel} type="button">
+              <button
+                className="button button--primary"
+                onClick={() => void loadModel()}
+                type="button"
+              >
                 Download and load model
               </button>
             ) : null}
@@ -213,7 +241,11 @@ export function TextModelLab() {
               </button>
             ) : null}
             {status === 'ready' ? (
-              <button className="button button--primary" onClick={generate} type="button">
+              <button
+                className="button button--primary"
+                onClick={() => void generate()}
+                type="button"
+              >
                 Generate 64 tokens
               </button>
             ) : null}
@@ -221,14 +253,14 @@ export function TextModelLab() {
               <button
                 className="button button--danger"
                 disabled={status === 'cancelling'}
-                onClick={cancel}
+                onClick={() => void cancel()}
                 type="button"
               >
                 {status === 'cancelling' ? 'Stopping…' : 'Stop generation'}
               </button>
             ) : null}
             {modelReady && status === 'ready' ? (
-              <button className="button button--quiet" onClick={unload} type="button">
+              <button className="button button--quiet" onClick={() => void unload()} type="button">
                 Unload model
               </button>
             ) : null}
@@ -250,7 +282,7 @@ export function TextModelLab() {
           <button
             className="cache-inspect-button"
             disabled={busy}
-            onClick={() => post({ type: 'inspect-cache' })}
+            onClick={() => void inspectCache()}
             type="button"
           >
             Inspect cached model files
@@ -300,34 +332,26 @@ export function TextModelLab() {
               <dd>WebGPU worker</dd>
             </div>
             <div>
-              <dt>Model files</dt>
+              <dt>Offline cache</dt>
               <dd>
-                {cached === null ? 'Not checked' : cached ? 'Fully cached' : 'Download required'}
+                {!cacheInspected
+                  ? 'Not inspected'
+                  : cacheStatus.cached
+                    ? `${cacheStatus.files.length}/${cacheStatus.files.length} files`
+                    : `${cacheStatus.files.filter((file) => file.cached).length}/${cacheStatus.files.length} files`}
               </dd>
             </div>
-            <div>
-              <dt>Load policy</dt>
-              <dd>{cachedFilesOnly ? 'Browser cache only' : 'Cache + network'}</dd>
-            </div>
           </dl>
-          <p>These are measurements from this browser session, not universal performance claims.</p>
-          {cacheFiles.length > 0 ? (
-            <details className="cache-files">
-              <summary>
-                {cacheFiles.filter((file) => file.cached).length}/{cacheFiles.length} required files
-                cached
-              </summary>
-              <ul>
-                {cacheFiles.map((file) => (
-                  <li key={file.file}>
-                    <span className={file.cached ? 'cache-file--ready' : 'cache-file--missing'}>
-                      {file.cached ? 'Cached' : 'Missing'}
-                    </span>
-                    <code>{file.file}</code>
-                  </li>
-                ))}
-              </ul>
-            </details>
+
+          {cacheStatus.files.length > 0 ? (
+            <ul className="cache-file-list">
+              {cacheStatus.files.map((file) => (
+                <li key={file.file}>
+                  <span>{file.cached ? 'Cached' : 'Missing'}</span>
+                  <code>{file.file}</code>
+                </li>
+              ))}
+            </ul>
           ) : null}
         </aside>
       </div>

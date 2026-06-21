@@ -73,7 +73,13 @@ describe('TransformersTextWorkerAdapter', () => {
 
     await expect(eventsPromise).resolves.toEqual([
       { requestId: 'request-1', text: ' world', type: 'token' },
-      { durationMs: 12, requestId: 'request-1', type: 'complete' },
+      {
+        durationMs: 12,
+        firstTokenMs: 3,
+        requestId: 'request-1',
+        tokenCount: 1,
+        type: 'complete',
+      },
     ]);
     expect(adapter.session?.state).toBe('ready');
   });
@@ -86,5 +92,28 @@ describe('TransformersTextWorkerAdapter', () => {
     );
 
     await expect(consume).rejects.toBeInstanceOf(RuntimeError);
+  });
+
+  it('reports cache completeness through the shared runtime shape', async () => {
+    const worker = new FakeWorker();
+    const adapter = new TransformersTextWorkerAdapter(() => worker);
+    const manifest = getTextManifest();
+    const inspection = adapter.inspectCache(manifest);
+
+    expect(worker.requests[0]).toMatchObject({
+      modelId: manifest.source.modelId,
+      revision: manifest.source.revision,
+      type: 'inspect-cache',
+    });
+    worker.emit({
+      cached: true,
+      files: [{ cached: true, file: 'onnx/model_q4.onnx' }],
+      type: 'cache-status',
+    });
+
+    await expect(inspection).resolves.toEqual({
+      cached: true,
+      files: [{ cached: true, file: 'onnx/model_q4.onnx' }],
+    });
   });
 });
