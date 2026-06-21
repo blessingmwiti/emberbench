@@ -108,21 +108,21 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Non-text spike
 
-- [ ] Choose image understanding or speech transcription for the third MVP workspace.
-- [ ] Select one small compatible model for that task.
-- [ ] Load and run it through WebGPU.
-- [ ] Verify input preprocessing works entirely in-browser.
-- [ ] Verify output is useful enough for an MVP workflow.
-- [ ] Record download, load, and inference measurements.
+- [x] Choose image understanding for the third MVP workspace.
+- [x] Select one small compatible model for that task.
+- [x] Load and run it through WebGPU.
+- [x] Verify input preprocessing works entirely in-browser.
+- [x] Verify output is useful enough for an MVP workflow.
+- [x] Record download, load, and inference measurements.
 
 ### Storage and offline spike
 
-- [ ] Inspect how the selected runtime caches model assets.
+- [x] Inspect how the selected runtime caches model assets.
 - [ ] Test a model download followed by an offline reload.
-- [ ] Confirm inference works after disabling the network.
+- [x] Confirm cached inference works while blocking all Hugging Face requests.
 - [ ] Compare Cache API, IndexedDB, and OPFS for the required model files.
 - [ ] Verify whether large files are duplicated between runtime and application storage.
-- [ ] Test `navigator.storage.estimate()`.
+- [x] Test `navigator.storage.estimate()`.
 - [ ] Test `navigator.storage.persist()`.
 - [ ] Simulate an interrupted model download.
 - [ ] Determine whether downloads can resume or must restart.
@@ -155,7 +155,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 ### Exit criteria
 
 - [x] Text generation runs and streams from a worker on WebGPU.
-- [ ] One non-text model completes a useful task.
+- [x] One non-text model completes a useful task.
 - [ ] At least one model can be reused while fully offline.
 - [ ] The selected storage strategy has been validated with real model files.
 - [ ] Basic Hugging Face repository inspection works.
@@ -403,7 +403,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 ### Worker protocol
 
 - [x] Define messages from the UI to an inference worker.
-- [ ] Define progress, token, result, warning, and error events.
+- [~] Define progress, token, result, warning, and error events.
 - [x] Add request identifiers.
 - [x] Add cancellation messages.
 - [x] Handle worker startup failure.
@@ -419,7 +419,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [ ] Implement practical WebAssembly fallback rules.
 - [ ] Configure local/cached model resolution.
 - [x] Stream text-generation events.
-- [ ] Support non-streaming task results.
+- [x] Support non-streaming task results.
 - [x] Implement cancellation.
 - [x] Implement unload and cleanup.
 - [ ] Handle WebGPU device loss.
@@ -1096,4 +1096,4 @@ Ideas belong here until they are accepted into a chronological phase.
 
 ## Current next action
 
-- [ ] Verify cached model loading and inference with the network disabled, then begin the compact vision-model spike.
+- [ ] Add service-worker-backed application-shell caching and verify a complete offline restart with cached text inference.

@@ -2,6 +2,7 @@ export const TEXT_SPIKE_MODEL = 'onnx-community/SmolLM2-135M-ONNX';
 
 export type TextModelWorkerRequest =
   | {
+      cachedFilesOnly?: boolean;
       type: 'load';
     }
   | {
@@ -18,6 +19,10 @@ export type TextModelWorkerRequest =
     };
 
 export type TextModelWorkerEvent =
+  | {
+      cached: boolean;
+      type: 'cache-status';
+    }
   | {
       data: Record<string, unknown>;
       type: 'progress';
