@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { formatBytes } from '../diagnostics/format';
-import { runDeviceDiagnostics } from '../diagnostics/run-device-diagnostics';
+import {
+  requestPersistentStorage,
+  runDeviceDiagnostics,
+} from '../diagnostics/run-device-diagnostics';
 import type { DeviceDiagnostic, DiagnosticStatus } from '../diagnostics/types';
 import { TextModelLab } from '../model-lab/TextModelLab';
 import { PwaStatus } from '../pwa/PwaStatus';
@@ -32,6 +35,8 @@ function StatusMark({ status }: { status: DiagnosticStatus }) {
 export function App() {
   const [diagnostic, setDiagnostic] = useState<DeviceDiagnostic | null>(null);
   const [status, setStatus] = useState<DiagnosticStatus>('idle');
+  const [persistenceMessage, setPersistenceMessage] = useState<string | null>(null);
+  const [requestingPersistence, setRequestingPersistence] = useState(false);
 
   const runDiagnostics = useCallback(async () => {
     setStatus('running');
@@ -47,6 +52,27 @@ export function App() {
 
   useEffect(() => {
     void runDiagnostics();
+  }, [runDiagnostics]);
+
+  const persistStorage = useCallback(async () => {
+    setRequestingPersistence(true);
+    setPersistenceMessage(null);
+
+    try {
+      const granted = await requestPersistentStorage();
+      setPersistenceMessage(
+        granted === null
+          ? 'This browser does not expose persistent storage controls.'
+          : granted
+            ? 'Persistent storage is granted. The browser is less likely to evict model files.'
+            : 'The browser did not grant persistence. Cached models may be evicted under storage pressure.',
+      );
+      await runDiagnostics();
+    } catch {
+      setPersistenceMessage('The persistent storage request could not be completed.');
+    } finally {
+      setRequestingPersistence(false);
+    }
   }, [runDiagnostics]);
 
   const statusCopy =
@@ -151,6 +177,21 @@ export function App() {
             >
               {status === 'running' ? 'Running checks…' : 'Run diagnostics again'}
             </button>
+            {diagnostic?.storage.available && !diagnostic.storage.persisted ? (
+              <button
+                className="button button--quiet"
+                disabled={requestingPersistence}
+                onClick={() => void persistStorage()}
+                type="button"
+              >
+                {requestingPersistence ? 'Requesting…' : 'Protect cached models'}
+              </button>
+            ) : null}
+            {persistenceMessage ? (
+              <p className="storage-message" role="status">
+                {persistenceMessage}
+              </p>
+            ) : null}
           </div>
 
           <div className="diagnostic-panel" aria-live="polite">

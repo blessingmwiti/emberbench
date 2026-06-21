@@ -35,6 +35,8 @@ This is a living record of browser, device, model, storage, and offline feasibil
 
 These values are observations from one environment, not minimum requirements.
 
+The browser accepted a user-triggered persistent-storage request but did not grant it. Emberbench therefore keeps the eviction warning visible instead of treating the request itself as success.
+
 ## Text-generation spike
 
 ### Configuration
@@ -93,6 +95,10 @@ The origin preview server was then stopped completely. Emberbench reloaded succe
 
 No browser warnings or errors were observed. `navigator.onLine` remained true because the browser still had general internet connectivity; the stronger test conditions were that the application origin was unavailable and the model worker rejected Hugging Face access.
 
+### Cache completeness inspection
+
+Transformers.js identified six required files for the SmolLM2 Q4 WebGPU pipeline. All six were present in browser cache. Emberbench now exposes the per-file result and does not infer offline readiness from the presence of only one model file.
+
 ## Vision spike
 
 ### Configuration
@@ -142,4 +148,4 @@ The caption is imperfect but recognizes the primary visual subject. Image prepro
 
 ## Next experiment
 
-Add persistent-storage controls and inspect browser-cache file completeness in the model manager.
+Begin public Hugging Face URL parsing, repository inspection, and compatibility reporting.

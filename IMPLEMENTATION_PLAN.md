@@ -123,7 +123,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [ ] Compare Cache API, IndexedDB, and OPFS for the required model files.
 - [ ] Verify whether large files are duplicated between runtime and application storage.
 - [x] Test `navigator.storage.estimate()`.
-- [ ] Test `navigator.storage.persist()`.
+- [x] Test `navigator.storage.persist()`.
 - [ ] Simulate an interrupted model download.
 - [ ] Determine whether downloads can resume or must restart.
 - [ ] Test model deletion and verify that storage is reclaimed.
@@ -387,7 +387,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [ ] Add retry, cancel, repair, and delete actions.
 - [ ] Confirm destructive deletion.
 - [ ] Explain browser eviction and persistent storage.
-- [ ] Request persistent storage at an appropriate user-driven moment.
+- [x] Request persistent storage at an appropriate user-driven moment.
 
 ### Exit criteria
 
@@ -536,7 +536,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Offline model behavior
 
-- [~] Detect whether every required model asset is stored.
+- [x] Detect whether every required model asset is stored for the text feasibility model.
 - [ ] Add `available offline`, `partial`, and `online only` states.
 - [x] Prevent silent network fallback during declared offline inference.
 - [x] Launch the application after its origin server becomes unavailable.
@@ -559,7 +559,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 - [~] The installed PWA launches without a network connection.
 - [x] At least one model completes inference fully offline.
-- [ ] Offline status never claims readiness for incomplete assets.
+- [x] Offline status never claims readiness for incomplete assets in the text feasibility model.
 - [ ] Application updates do not silently break installed models.
 
 ---
@@ -1096,4 +1096,4 @@ Ideas belong here until they are accepted into a chronological phase.
 
 ## Current next action
 
-- [ ] Add persistent-storage controls and model-cache completeness details.
+- [ ] Begin public Hugging Face URL parsing, repository inspection, and compatibility reporting.

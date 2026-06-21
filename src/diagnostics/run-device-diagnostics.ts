@@ -87,3 +87,11 @@ export async function runDeviceDiagnostics(): Promise<DeviceDiagnostic> {
     webGpu,
   };
 }
+
+export async function requestPersistentStorage(): Promise<boolean | null> {
+  if (!navigator.storage?.persist) {
+    return null;
+  }
+
+  return navigator.storage.persist();
+}

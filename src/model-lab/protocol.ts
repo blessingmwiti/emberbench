@@ -1,5 +1,10 @@
 export const TEXT_SPIKE_MODEL = 'onnx-community/SmolLM2-135M-ONNX';
 
+export interface ModelCacheFile {
+  cached: boolean;
+  file: string;
+}
+
 export type TextModelWorkerRequest =
   | {
       cachedFilesOnly?: boolean;
@@ -15,12 +20,16 @@ export type TextModelWorkerRequest =
       type: 'cancel';
     }
   | {
+      type: 'inspect-cache';
+    }
+  | {
       type: 'unload';
     };
 
 export type TextModelWorkerEvent =
   | {
       cached: boolean;
+      files: ModelCacheFile[];
       type: 'cache-status';
     }
   | {

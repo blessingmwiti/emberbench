@@ -173,17 +173,28 @@ async function unload() {
   post({ type: 'unloaded' });
 }
 
+async function inspectCache() {
+  const status = await ModelRegistry.is_pipeline_cached_files('text-generation', TEXT_SPIKE_MODEL, {
+    device: 'webgpu',
+    dtype: 'q4',
+  });
+
+  post({
+    cached: status.allCached,
+    files: status.files,
+    type: 'cache-status',
+  });
+
+  return status;
+}
+
 scope.addEventListener('message', (event: MessageEvent<TextModelWorkerRequest>) => {
   const request = event.data;
 
   switch (request.type) {
     case 'load':
-      void ModelRegistry.is_pipeline_cached('text-generation', TEXT_SPIKE_MODEL, {
-        device: 'webgpu',
-        dtype: 'q4',
-      })
-        .then((cached) => {
-          post({ cached, type: 'cache-status' });
+      void inspectCache()
+        .then(() => {
           return getGenerator(request.cachedFilesOnly);
         })
         .catch((error: unknown) => {
@@ -192,6 +203,14 @@ scope.addEventListener('message', (event: MessageEvent<TextModelWorkerRequest>) 
             type: 'error',
           });
         });
+      break;
+    case 'inspect-cache':
+      void inspectCache().catch((error: unknown) => {
+        post({
+          message: error instanceof Error ? error.message : 'Model cache inspection failed.',
+          type: 'error',
+        });
+      });
       break;
     case 'generate':
       void generate(request);

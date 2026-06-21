@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import {
   TEXT_SPIKE_MODEL,
+  type ModelCacheFile,
   type TextModelWorkerEvent,
   type TextModelWorkerRequest,
 } from './protocol';
@@ -41,6 +42,7 @@ export function TextModelLab() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cached, setCached] = useState<boolean | null>(null);
+  const [cacheFiles, setCacheFiles] = useState<ModelCacheFile[]>([]);
   const [cachedFilesOnly, setCachedFilesOnly] = useState(false);
 
   useEffect(
@@ -65,6 +67,7 @@ export function TextModelLab() {
       switch (message.type) {
         case 'cache-status':
           setCached(message.cached);
+          setCacheFiles(message.files);
           break;
         case 'progress': {
           const nextProgress = readProgress(message.data);
@@ -244,6 +247,15 @@ export function TextModelLab() {
             </span>
           </label>
 
+          <button
+            className="cache-inspect-button"
+            disabled={busy}
+            onClick={() => post({ type: 'inspect-cache' })}
+            type="button"
+          >
+            Inspect cached model files
+          </button>
+
           {status === 'loading' ? (
             <div
               aria-label={`Model loading progress: ${progress ?? 0}%`}
@@ -299,6 +311,24 @@ export function TextModelLab() {
             </div>
           </dl>
           <p>These are measurements from this browser session, not universal performance claims.</p>
+          {cacheFiles.length > 0 ? (
+            <details className="cache-files">
+              <summary>
+                {cacheFiles.filter((file) => file.cached).length}/{cacheFiles.length} required files
+                cached
+              </summary>
+              <ul>
+                {cacheFiles.map((file) => (
+                  <li key={file.file}>
+                    <span className={file.cached ? 'cache-file--ready' : 'cache-file--missing'}>
+                      {file.cached ? 'Cached' : 'Missing'}
+                    </span>
+                    <code>{file.file}</code>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
         </aside>
       </div>
     </section>
