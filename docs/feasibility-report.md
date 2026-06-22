@@ -172,4 +172,4 @@ Runtime download adapters now combine per-artifact progress using manifest byte 
 
 ## Next experiment
 
-Extract a shared model-installation service for direct retries from Downloads.
+Surface active per-file transfer detail in the Downloads page.

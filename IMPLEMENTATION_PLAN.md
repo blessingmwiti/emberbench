@@ -1112,4 +1112,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Add application routing for Home, Models, Downloads, and Settings.
 - [x] Weight runtime download progress across declared model artifacts.
 - [x] Add a coordinated delete action to the Downloads page.
-- [ ] Extract a shared model-installation service for direct retries from Downloads.
+- [x] Extract a shared model-installation service for direct retries from Downloads.
+- [ ] Surface active per-file transfer detail in the Downloads page.

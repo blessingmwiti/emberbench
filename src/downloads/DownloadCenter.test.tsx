@@ -1,9 +1,11 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { listModels, removeModel } = vi.hoisted(() => ({
+const { install, listModels, removeModel, terminate } = vi.hoisted(() => ({
+  install: vi.fn(),
   listModels: vi.fn(),
   removeModel: vi.fn(),
+  terminate: vi.fn(),
 }));
 
 vi.mock('../storage/database', () => ({
@@ -17,12 +19,26 @@ vi.mock('../storage/remove-installed-model', () => ({
   removeInstalledModel: removeModel,
 }));
 
+vi.mock('../storage/download-preflight', () => ({
+  runDownloadPreflight: () => Promise.resolve({ message: 'Ready.', status: 'ready' }),
+}));
+
+vi.mock('../runtimes/create-runtime-adapter', () => ({
+  createRuntimeAdapter: () => ({ terminate }),
+}));
+
+vi.mock('../storage/install-model', () => ({
+  installModel: install,
+}));
+
 import { DownloadCenter } from './DownloadCenter';
 
 describe('DownloadCenter', () => {
   beforeEach(() => {
     listModels.mockReset();
     removeModel.mockReset();
+    install.mockReset();
+    terminate.mockReset();
   });
 
   it('shows interrupted progress with a recovery action', async () => {
@@ -50,10 +66,10 @@ describe('DownloadCenter', () => {
     expect(screen.getByText('Needs attention')).toBeInTheDocument();
     expect(screen.getByText('Attempt 2', { exact: false })).toBeInTheDocument();
     expect(screen.getByText('33%')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Retry in Models' })).toHaveAttribute(
-      'href',
-      '#/models',
-    );
+    install.mockResolvedValue({});
+    fireEvent.click(screen.getByRole('button', { name: 'Retry download' }));
+    await waitFor(() => expect(install).toHaveBeenCalledOnce());
+    expect(terminate).toHaveBeenCalledOnce();
 
     fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
     expect(screen.getByRole('alert')).toHaveTextContent('Remove cached files');

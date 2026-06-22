@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { findCuratedModel } from '../models/catalog/registry';
 import type { InstalledModel } from '../models/catalog/types';
+import { createRuntimeAdapter } from '../runtimes/create-runtime-adapter';
 import { INSTALLED_MODELS_CHANGED_EVENT, installedModels } from '../storage/database';
+import { runDownloadPreflight } from '../storage/download-preflight';
+import { installModel } from '../storage/install-model';
 import { removeInstalledModel } from '../storage/remove-installed-model';
 
 function statusLabel(model: InstalledModel) {
@@ -26,11 +29,14 @@ function progressValue(model: InstalledModel) {
 }
 
 export function DownloadCenter() {
+  const retryControllers = useRef(new Map<string, AbortController>());
   const [records, setRecords] = useState<InstalledModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmRemovalId, setConfirmRemovalId] = useState<string | null>(null);
   const [removingModelId, setRemovingModelId] = useState<string | null>(null);
   const [removalError, setRemovalError] = useState<string | null>(null);
+  const [retryingModelId, setRetryingModelId] = useState<string | null>(null);
+  const [retryMessage, setRetryMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -49,9 +55,57 @@ export function DownloadCenter() {
     window.addEventListener(INSTALLED_MODELS_CHANGED_EVENT, refresh);
     return () => {
       active = false;
+      for (const controller of retryControllers.current.values()) controller.abort();
+      retryControllers.current.clear();
       window.removeEventListener(INSTALLED_MODELS_CHANGED_EVENT, refresh);
     };
   }, []);
+
+  async function retryDownload(record: InstalledModel) {
+    const manifest = findCuratedModel(record.modelId);
+    if (!manifest) {
+      setRetryMessage('This model is no longer in the curated registry.');
+      return;
+    }
+
+    const preflight = await runDownloadPreflight(manifest);
+    if (preflight.status === 'blocked') {
+      setRetryMessage(preflight.message);
+      return;
+    }
+
+    const controller = new AbortController();
+    const adapter = createRuntimeAdapter(manifest);
+    retryControllers.current.set(record.modelId, controller);
+    setRetryingModelId(record.modelId);
+    setRetryMessage(preflight.status === 'warning' ? preflight.message : null);
+
+    try {
+      await installModel({
+        adapter,
+        manifest,
+        onQueueChange: setRetryMessage,
+        onRetry: (attempt) => setRetryMessage(`Retrying download · attempt ${attempt} of 3…`),
+        signal: controller.signal,
+      });
+      setRetryMessage(`${manifest.name} is ready for offline use.`);
+    } catch (error) {
+      const cancelled =
+        (error instanceof DOMException && error.name === 'AbortError') ||
+        (error instanceof Error && error.message.toLowerCase().includes('abort'));
+      setRetryMessage(
+        cancelled
+          ? 'Model download cancelled. Complete cached files can be reused on the next retry.'
+          : error instanceof Error
+            ? error.message
+            : 'Model download failed.',
+      );
+    } finally {
+      adapter.terminate();
+      retryControllers.current.delete(record.modelId);
+      setRetryingModelId(null);
+    }
+  }
 
   async function removeRecord(record: InstalledModel) {
     const manifest = findCuratedModel(record.modelId);
@@ -119,12 +173,31 @@ export function DownloadCenter() {
                   <span>{progress}%</span>
                 </div>
                 <div className="download-card__actions">
-                  <a className="button button--quiet" href="#/models">
-                    {record.status === 'failed' ? 'Retry in Models' : 'Open Models'}
-                  </a>
+                  {record.status === 'failed' ? (
+                    <button
+                      className="button button--quiet"
+                      disabled={retryingModelId !== null}
+                      onClick={() => void retryDownload(record)}
+                      type="button"
+                    >
+                      Retry download
+                    </button>
+                  ) : retryingModelId === record.modelId ? (
+                    <button
+                      className="button button--quiet"
+                      onClick={() => retryControllers.current.get(record.modelId)?.abort()}
+                      type="button"
+                    >
+                      Cancel download
+                    </button>
+                  ) : (
+                    <a className="button button--quiet" href="#/models">
+                      Open Models
+                    </a>
+                  )}
                   <button
                     className="button button--danger"
-                    disabled={removingModelId === record.modelId}
+                    disabled={removingModelId === record.modelId || retryingModelId !== null}
                     onClick={() => {
                       setRemovalError(null);
                       setConfirmRemovalId(record.modelId);
@@ -168,6 +241,11 @@ export function DownloadCenter() {
       {removalError ? (
         <p className="download-error" role="alert">
           {removalError}
+        </p>
+      ) : null}
+      {retryMessage ? (
+        <p className="download-message" role="status">
+          {retryMessage}
         </p>
       ) : null}
     </section>

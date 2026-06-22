@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { formatBytes } from '../diagnostics/format';
 import { findCuratedModel } from '../models/catalog/registry';
-import type { InstalledModel, InstalledModelStatus } from '../models/catalog/types';
-import { createInstalledModel, transitionInstalledModel } from '../models/installed-model';
+import type { InstalledModel } from '../models/catalog/types';
 import { RuntimeError } from '../runtimes/core/errors';
 import type { RuntimeCacheStatus, RuntimeEvent } from '../runtimes/core/types';
 import { TransformersVisionWorkerAdapter } from '../runtimes/transformers/vision-worker-adapter';
@@ -14,8 +13,7 @@ import {
   SETTINGS_CHANGED_EVENT,
 } from '../storage/database';
 import { runDownloadPreflight } from '../storage/download-preflight';
-import { modelDownloads, type DownloadLease } from '../storage/download-coordinator';
-import { withBoundedRetry } from '../storage/retry';
+import { installModel } from '../storage/install-model';
 
 type VisionStatus = 'idle' | 'loading' | 'ready' | 'running' | 'cancelling' | 'error';
 
@@ -124,29 +122,6 @@ export function VisionModelLab() {
     setDurationMs(null);
   }
 
-  async function persistRecord(record: InstalledModel) {
-    if (mountedRef.current) setInstallRecord(record);
-    try {
-      await installedModels.put(record);
-      if (mountedRef.current) setStorageMessage(null);
-    } catch {
-      if (mountedRef.current) {
-        setStorageMessage('The vision model works, but its install record could not be saved.');
-      }
-    }
-  }
-
-  function beginRecord(existing: InstalledModel | null, nextStatus: InstalledModelStatus) {
-    if (!existing || existing.sourceRevision !== visionModel.source.revision) {
-      return createInstalledModel(visionModel, nextStatus);
-    }
-    try {
-      return transitionInstalledModel(existing, nextStatus);
-    } catch {
-      return createInstalledModel(visionModel, nextStatus);
-    }
-  }
-
   async function readCacheStatus() {
     const next = await ensureAdapter().inspectCache(visionModel);
     if (mountedRef.current) {
@@ -190,7 +165,6 @@ export function VisionModelLab() {
     setDownloadWarning(null);
     const adapter = ensureAdapter();
     const startedAt = performance.now();
-    let downloadLease: DownloadLease | null = null;
     let downloadController: AbortController | null = null;
     if (!cachedFilesOnly) {
       downloadController = new AbortController();
@@ -199,103 +173,40 @@ export function VisionModelLab() {
       setError(null);
       setProgress(0);
       setStatus('loading');
-      setDownloadQueueMessage('Waiting for the model download slot…');
-      try {
-        downloadLease = await modelDownloads.acquire(visionModel.id, downloadController.signal);
-        setDownloadQueueMessage(null);
-      } catch (queueError) {
-        setError(
-          isAbortError(queueError)
-            ? 'Vision model download cancelled.'
-            : errorMessage(queueError, 'The vision model download could not be queued.'),
-        );
-        setStatus(isAbortError(queueError) ? 'idle' : 'error');
-        setDownloadQueueMessage(null);
-        setDownloadCancellable(false);
-        downloadAbortRef.current = null;
-        return;
-      }
     }
 
-    let record = beginRecord(
-      await installedModels.get(visionModel.id).catch(() => installRecord),
-      cachedFilesOnly ? 'verifying' : 'downloading',
-    );
-    await persistRecord(record);
-    let lastPersistedProgress = record.downloadProgress ?? 0;
     setError(null);
     setProgress(0);
     setStatus('loading');
 
     try {
-      if (!cachedFilesOnly) {
-        await withBoundedRetry(
-          async () => {
-            for await (const event of adapter.download(visionModel, {
-              signal: downloadController?.signal,
-            })) {
-              if (event.type === 'progress' && mountedRef.current) {
-                setProgress(event.progress * 100);
-                if (Math.abs(event.progress - lastPersistedProgress) >= 0.05) {
-                  record = transitionInstalledModel(record, 'downloading', {
-                    downloadProgress: event.progress,
-                  });
-                  lastPersistedProgress = event.progress;
-                  await persistRecord(record);
-                }
-              }
-            }
-          },
-          {
-            onRetry: async (attempt) => {
-              record = transitionInstalledModel(record, 'downloading', {
-                downloadAttempt: attempt,
-                downloadProgress: 0,
-              });
-              lastPersistedProgress = 0;
-              await persistRecord(record);
-              if (mountedRef.current) {
-                setDownloadQueueMessage(`Retrying download · attempt ${attempt} of 3…`);
-              }
-            },
-            signal: downloadController?.signal,
-          },
-        );
-        if (mountedRef.current) setDownloadQueueMessage(null);
-        record = transitionInstalledModel(record, 'verifying');
-        await persistRecord(record);
-      }
-
-      await adapter.load(visionModel, { cachedFilesOnly });
+      const result = await installModel({
+        adapter,
+        cachedFilesOnly,
+        manifest: visionModel,
+        onProgress: (nextProgress) => {
+          if (mountedRef.current) setProgress(nextProgress * 100);
+        },
+        onQueueChange: (message) => {
+          if (mountedRef.current) setDownloadQueueMessage(message);
+        },
+        onRecord: (record) => {
+          if (mountedRef.current) setInstallRecord(record);
+        },
+        onRetry: (attempt) => {
+          if (mountedRef.current) {
+            setDownloadQueueMessage(`Retrying download · attempt ${attempt} of 3…`);
+          }
+        },
+        signal: downloadController?.signal,
+      });
       if (!mountedRef.current) return;
       setLoadTimeMs(performance.now() - startedAt);
       setProgress(100);
       setStatus('ready');
-
-      try {
-        const verified = await readCacheStatus();
-        const cachedFiles = verified.files.filter((file) => file.cached).length;
-        record = transitionInstalledModel(record, verified.cached ? 'installed' : 'failed', {
-          cachedFiles,
-          lastError: verified.cached ? undefined : 'Vision cache verification found missing files.',
-          totalFiles: verified.files.length,
-        });
-        await persistRecord(record);
-      } catch (verificationError) {
-        record = transitionInstalledModel(record, 'failed', {
-          lastError: errorMessage(verificationError, 'Vision cache verification failed.'),
-        });
-        await persistRecord(record);
-      }
+      setCacheStatus(result.cache);
+      setCacheInspected(true);
     } catch (loadError) {
-      try {
-        record = transitionInstalledModel(record, 'failed', {
-          lastError: errorMessage(loadError, 'Vision model loading failed.'),
-        });
-        await persistRecord(record);
-      } catch {
-        // The visible runtime error remains the authoritative failure signal.
-      }
       if (mountedRef.current) {
         setError(
           isAbortError(loadError)
@@ -305,7 +216,6 @@ export function VisionModelLab() {
         setStatus(isAbortError(loadError) ? 'idle' : 'error');
       }
     } finally {
-      downloadLease?.release();
       downloadAbortRef.current = null;
       if (mountedRef.current) {
         setDownloadQueueMessage(null);

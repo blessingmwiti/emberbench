@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { formatBytes } from '../diagnostics/format';
 import { findCuratedModel } from '../models/catalog/registry';
-import type { InstalledModel, InstalledModelStatus } from '../models/catalog/types';
-import { createInstalledModel, transitionInstalledModel } from '../models/installed-model';
+import type { InstalledModel } from '../models/catalog/types';
 import {
   appSettings,
   INSTALLED_MODELS_CHANGED_EVENT,
@@ -11,8 +10,7 @@ import {
   SETTINGS_CHANGED_EVENT,
 } from '../storage/database';
 import { runDownloadPreflight } from '../storage/download-preflight';
-import { modelDownloads, type DownloadLease } from '../storage/download-coordinator';
-import { withBoundedRetry } from '../storage/retry';
+import { installModel } from '../storage/install-model';
 import type { RuntimeCacheStatus, RuntimeEvent } from '../runtimes/core/types';
 import { RuntimeError } from '../runtimes/core/errors';
 import { TransformersTextWorkerAdapter } from '../runtimes/transformers/text-worker-adapter';
@@ -144,33 +142,6 @@ export function TextModelLab() {
     return nextStatus;
   }
 
-  async function persistInstallRecord(record: InstalledModel) {
-    if (mountedRef.current) {
-      setInstallRecord(record);
-    }
-    try {
-      await installedModels.put(record);
-      if (mountedRef.current) {
-        setStorageMessage(null);
-      }
-    } catch {
-      if (mountedRef.current) {
-        setStorageMessage('The model works, but its installation metadata could not be saved.');
-      }
-    }
-  }
-
-  function beginInstallRecord(existing: InstalledModel | null, status: InstalledModelStatus) {
-    if (!existing || existing.sourceRevision !== textModel.source.revision) {
-      return createInstalledModel(textModel, status);
-    }
-    try {
-      return transitionInstalledModel(existing, status);
-    } catch {
-      return createInstalledModel(textModel, status);
-    }
-  }
-
   async function loadModel(preflightApproved = false) {
     if (!cachedFilesOnly && !preflightApproved) {
       const preflight = await runDownloadPreflight(textModel);
@@ -195,7 +166,6 @@ export function TextModelLab() {
     setDownloadWarning(null);
     const adapter = ensureAdapter();
     const startedAt = performance.now();
-    let downloadLease: DownloadLease | null = null;
     let downloadController: AbortController | null = null;
     if (!cachedFilesOnly) {
       downloadController = new AbortController();
@@ -204,111 +174,42 @@ export function TextModelLab() {
       setError(null);
       setProgress(0);
       setStatus('loading');
-      setDownloadQueueMessage('Waiting for the model download slot…');
-      try {
-        downloadLease = await modelDownloads.acquire(textModel.id, downloadController.signal);
-        setDownloadQueueMessage(null);
-      } catch (queueError) {
-        setError(
-          isAbortError(queueError)
-            ? 'Model download cancelled.'
-            : displayRuntimeError(queueError, 'The model download could not be queued.'),
-        );
-        setStatus(isAbortError(queueError) ? 'idle' : 'error');
-        setDownloadQueueMessage(null);
-        setDownloadCancellable(false);
-        downloadAbortRef.current = null;
-        return;
-      }
     }
 
-    let record = beginInstallRecord(
-      await installedModels.get(textModel.id).catch(() => installRecord),
-      cachedFilesOnly ? 'verifying' : 'downloading',
-    );
-    await persistInstallRecord(record);
-    let lastPersistedProgress = record.downloadProgress ?? 0;
     setError(null);
     setProgress(0);
     setStatus('loading');
 
     try {
-      if (!cachedFilesOnly) {
-        await withBoundedRetry(
-          async () => {
-            for await (const event of adapter.download(textModel, {
-              signal: downloadController?.signal,
-            })) {
-              if (event.type === 'progress' && mountedRef.current) {
-                setProgress(event.progress * 100);
-                if (Math.abs(event.progress - lastPersistedProgress) >= 0.05) {
-                  record = transitionInstalledModel(record, 'downloading', {
-                    downloadProgress: event.progress,
-                  });
-                  lastPersistedProgress = event.progress;
-                  await persistInstallRecord(record);
-                }
-              }
-            }
-          },
-          {
-            onRetry: async (attempt) => {
-              record = transitionInstalledModel(record, 'downloading', {
-                downloadAttempt: attempt,
-                downloadProgress: 0,
-              });
-              lastPersistedProgress = 0;
-              await persistInstallRecord(record);
-              if (mountedRef.current) {
-                setDownloadQueueMessage(`Retrying download · attempt ${attempt} of 3…`);
-              }
-            },
-            signal: downloadController?.signal,
-          },
-        );
-        if (mountedRef.current) setDownloadQueueMessage(null);
-        record = transitionInstalledModel(record, 'verifying');
-        await persistInstallRecord(record);
-      }
-
-      await adapter.load(textModel, { cachedFilesOnly });
+      const result = await installModel({
+        adapter,
+        cachedFilesOnly,
+        manifest: textModel,
+        onProgress: (nextProgress) => {
+          if (mountedRef.current) setProgress(nextProgress * 100);
+        },
+        onQueueChange: (message) => {
+          if (mountedRef.current) setDownloadQueueMessage(message);
+        },
+        onRecord: (record) => {
+          if (mountedRef.current) setInstallRecord(record);
+        },
+        onRetry: (attempt) => {
+          if (mountedRef.current) {
+            setDownloadQueueMessage(`Retrying download · attempt ${attempt} of 3…`);
+          }
+        },
+        signal: downloadController?.signal,
+      });
       if (!mountedRef.current) {
         return;
       }
       setLoadTimeMs(performance.now() - startedAt);
       setProgress(100);
       setStatus('ready');
-      try {
-        const verifiedCache = await readCacheStatus();
-        const cachedFiles = verifiedCache.files.filter((file) => file.cached).length;
-        record = transitionInstalledModel(record, verifiedCache.cached ? 'installed' : 'failed', {
-          cachedFiles,
-          lastError: verifiedCache.cached
-            ? undefined
-            : 'Cache verification found missing model files.',
-          totalFiles: verifiedCache.files.length,
-        });
-        await persistInstallRecord(record);
-      } catch (verificationError) {
-        record = transitionInstalledModel(record, 'failed', {
-          lastError: displayRuntimeError(verificationError, 'Model cache verification failed.'),
-        });
-        await persistInstallRecord(record);
-        if (mountedRef.current) {
-          setStorageMessage(
-            'The model loaded, but its offline installation could not be verified.',
-          );
-        }
-      }
+      setCacheStatus(result.cache);
+      setCacheInspected(true);
     } catch (loadError) {
-      try {
-        record = transitionInstalledModel(record, 'failed', {
-          lastError: displayRuntimeError(loadError, 'Model loading failed.'),
-        });
-        await persistInstallRecord(record);
-      } catch {
-        // The visible runtime error remains the authoritative failure signal.
-      }
       if (mountedRef.current) {
         setError(
           isAbortError(loadError)
@@ -318,7 +219,6 @@ export function TextModelLab() {
         setStatus(isAbortError(loadError) ? 'idle' : 'error');
       }
     } finally {
-      downloadLease?.release();
       downloadAbortRef.current = null;
       if (mountedRef.current) {
         setDownloadQueueMessage(null);

@@ -395,6 +395,11 @@ h2 {
   color: var(--ember-light);
 }
 
+.download-message {
+  margin: 18px 0 0;
+  color: var(--gold);
+}
+
 .empty-state {
   padding: 48px;
   border: 1px dashed var(--line);
