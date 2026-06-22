@@ -16,8 +16,17 @@ export function recommendDeviceTier(
     return null;
   }
   if (!diagnostic.runtime.webGpu || !diagnostic.webGpu.limits) {
+    if (diagnostic.runtime.wasm) {
+      return {
+        reason:
+          'WebGPU is unavailable, so Emberbench will use the slower WebAssembly worker and recommend compact models.',
+        tier: 'basic',
+      };
+    }
     return {
-      reason: diagnostic.webGpu.error ?? 'WebGPU initialization did not succeed.',
+      reason:
+        diagnostic.webGpu.error ??
+        'Neither WebGPU nor the WebAssembly fallback is available in this browser.',
       tier: 'unsupported',
     };
   }

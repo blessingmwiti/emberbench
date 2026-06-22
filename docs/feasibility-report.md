@@ -158,9 +158,37 @@ The inspector recommends a reduced-precision graph and includes matching externa
 
 An explicit runtime probe then downloaded the pinned SmolLM2 revision, initialized it through WebGPU in a disposable worker, released the model, and reported success in 46.38 seconds.
 
+Runtime download adapters now combine per-artifact progress using manifest byte sizes. A tiny graph file reaching 100% therefore no longer makes an external-data model appear fully downloaded; progress events expose the active artifact, its progress, loaded bytes, total bytes, and weighted overall progress.
+
+The shared installation service persists that artifact detail with the model record. The Downloads page can therefore show the active file, its own percentage, transferred bytes, and overall model progress across reloads and direct retries.
+
+Active remote installations also listen for the browser moving offline. Connectivity loss aborts the worker, bypasses pointless automatic retries, preserves completed cache data and progress, and records a recoverable reconnect-and-retry error.
+
+The in-app browser controller did not expose network emulation for this check, so the offline transition is currently verified by an integration test that dispatches the browser event and asserts abort, persistence, no retry, and lock release. A physical browser network-toggle test remains useful cross-browser validation.
+
+Download failures are now normalized before reaching the UI. Offline state, authentication or gated access, missing pinned artifacts, rate limits, server failures, and ambiguous fetch/CORS failures each receive specific guidance. Permanent 403/404-style failures no longer consume automatic retry attempts.
+
+Downloads now reports browser-wide storage usage, estimated remaining quota, total estimated quota, and whether persistent-storage eviction protection is granted. The interface explicitly distinguishes these browser estimates from model-only byte totals.
+
+The Models route now includes All, Offline ready, and Needs attention views. Current pinned revisions must be fully verified before entering the offline-ready view; failures and stale revisions are grouped for repair.
+
+Runtime adapters now recognize WebGPU device-loss signatures during model preparation and active inference. Pending work fails with a recoverable `DEVICE_LOST` code, the runtime session enters an error state, and the UI receives guidance to reload, reduce GPU pressure, or choose a smaller model. Real hardware-triggered device loss remains a cross-browser validation item.
+
+Direct worker tests now execute the worker modules with a mocked Transformers.js boundary. They verify pinned text configuration, WebGPU selection, progress-before-ready messages, and structured vision load errors in addition to the adapter contract suite.
+
+Runtime discovery now selects WebGPU only when it is exposed in a secure context and otherwise sends an explicit WebAssembly device choice through adapters and workers. Diagnostics report the wired fallback and recommend compact models instead of marking WebGPU-less browsers wholly unsupported. Direct worker tests verify the WASM selection reaches Transformers.js; real fallback inference is the next validation step.
+
+The local Runtime preference now supports Auto, Prefer WebGPU, and Force WebAssembly. A real forced-WASM SmolLM2 probe completed on June 22, 2026: 100.11 seconds cold load including the remaining download, 6/6 files verified, 2.54 seconds to first token, and 48.71 seconds for 64 generated tokens. A subsequent cached-files-only WASM load completed in 7.54 seconds with remote model requests blocked.
+
+Successful text and vision runs now write versioned local benchmark summaries containing only model, task, runtime device, timings, and output-unit counts. Prompts, generated text, captions, and images are excluded. The Models route shows the six most recent results, and full local-data reset clears them.
+
+Workspace sessions now have a versioned local schema and IndexedDB repository with validated user/assistant messages, first-message titles, chronological listing, updates, deletion, and full-reset coverage. This is the persistence foundation for task-focused workspaces; no account or sync service is involved.
+
+General Assistant now runs end to end from the Home workspace launcher. It loads only verified cached model files, streams local replies, supports stopping generation, creates first-message titles, lists/selects/deletes sessions, and restores conversation history after a direct `#/assistant` reload. A live SmolLM2 conversation verified the full path; response quality remains constrained by the intentionally tiny development model.
+
 ## Open feasibility risks
 
-- WebGPU device loss during active inference
+- Real browser propagation of WebGPU device loss during active inference
 - PWA installation behavior outside the in-app Chromium environment
 - Multi-gigabyte storage reliability and eviction
 - Higher-quality captioning, OCR, and visual-question-answering models
@@ -170,4 +198,4 @@ An explicit runtime probe then downloaded the pinned SmolLM2 revision, initializ
 
 ## Next experiment
 
-Add model-installation repair and stale-record reconciliation.
+Add conversation rename, copy, regenerate, and safe Markdown rendering.

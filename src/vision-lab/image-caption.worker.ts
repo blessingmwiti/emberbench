@@ -14,12 +14,14 @@ const originalFetch = scope.fetch.bind(scope);
 let blockRemoteModelRequests = false;
 
 interface ResolvedVisionConfig {
+  device: NonNullable<VisionWorkerConfig['device']>;
   dtype: NonNullable<VisionWorkerConfig['dtype']>;
   modelId: string;
   revision: string;
 }
 
 const defaultConfig: ResolvedVisionConfig = {
+  device: 'webgpu',
   dtype: 'q8',
   modelId: VISION_SPIKE_MODEL,
   revision: 'main',
@@ -27,6 +29,7 @@ const defaultConfig: ResolvedVisionConfig = {
 
 function resolveConfig(config: VisionWorkerConfig): ResolvedVisionConfig {
   return {
+    device: config.device ?? defaultConfig.device,
     dtype: config.dtype ?? defaultConfig.dtype,
     modelId: config.modelId ?? defaultConfig.modelId,
     revision: config.revision ?? defaultConfig.revision,
@@ -34,7 +37,7 @@ function resolveConfig(config: VisionWorkerConfig): ResolvedVisionConfig {
 }
 
 function configKey(config: ResolvedVisionConfig) {
-  return `${config.modelId}@${config.revision}:${config.dtype}`;
+  return `${config.modelId}@${config.revision}:${config.device}:${config.dtype}`;
 }
 
 scope.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -55,7 +58,7 @@ async function createCaptioner(config: ResolvedVisionConfig, cachedFilesOnly = f
 
   try {
     const captioner = await pipeline('image-to-text', config.modelId, {
-      device: 'webgpu',
+      device: config.device,
       dtype: config.dtype,
       progress_callback: (data) => {
         post({
@@ -149,18 +152,27 @@ async function unload() {
 
 function registryOptions(config: ResolvedVisionConfig) {
   return {
-    device: 'webgpu',
+    device: config.device,
     dtype: config.dtype,
     revision: config.revision,
   } as const;
 }
 
 async function inspectCache(config: ResolvedVisionConfig) {
-  const status = await ModelRegistry.is_pipeline_cached_files(
-    'image-to-text',
-    config.modelId,
-    registryOptions(config),
-  );
+  const previousBlockRemoteModelRequests = blockRemoteModelRequests;
+  blockRemoteModelRequests = true;
+  let status;
+  try {
+    status = await ModelRegistry.is_pipeline_cached_files(
+      'image-to-text',
+      config.modelId,
+      registryOptions(config),
+    );
+  } catch {
+    status = { allCached: false, files: [] };
+  } finally {
+    blockRemoteModelRequests = previousBlockRemoteModelRequests;
+  }
   post({ cached: status.allCached, files: status.files, type: 'cache-status' });
   return status;
 }
@@ -173,43 +185,49 @@ async function deleteCache(config: ResolvedVisionConfig) {
     await unload();
   }
 
+  const previousBlockRemoteModelRequests = blockRemoteModelRequests;
+  blockRemoteModelRequests = true;
   const options = registryOptions(config);
-  const before = await ModelRegistry.is_pipeline_cached_files(
-    'image-to-text',
-    config.modelId,
-    options,
-  );
-  await ModelRegistry.clear_pipeline_cache('image-to-text', config.modelId, options);
-
-  if (typeof caches !== 'undefined') {
-    const cache = await caches.open(env.cacheKey);
-    await Promise.all(
-      before.files.map(async ({ file }) => {
-        const remoteUrl = new URL(
-          `${config.modelId}/resolve/${encodeURIComponent(config.revision)}/${file}`,
-          env.remoteHost,
-        ).href;
-        const localUrl = new URL(
-          `${env.localModelPath}${config.modelId}/${file}`,
-          scope.location.origin,
-        ).href;
-        await Promise.all([cache.delete(remoteUrl), cache.delete(localUrl)]);
-      }),
+  try {
+    const before = await ModelRegistry.is_pipeline_cached_files(
+      'image-to-text',
+      config.modelId,
+      options,
     );
-  }
+    await ModelRegistry.clear_pipeline_cache('image-to-text', config.modelId, options);
 
-  const after = await ModelRegistry.is_pipeline_cached_files(
-    'image-to-text',
-    config.modelId,
-    options,
-  );
-  const filesCached = before.files.filter((file) => file.cached).length;
-  const filesRemaining = after.files.filter((file) => file.cached).length;
-  post({
-    filesCached,
-    filesDeleted: filesCached - filesRemaining,
-    type: 'cache-deleted',
-  });
+    if (typeof caches !== 'undefined') {
+      const cache = await caches.open(env.cacheKey);
+      await Promise.all(
+        before.files.map(async ({ file }) => {
+          const remoteUrl = new URL(
+            `${config.modelId}/resolve/${encodeURIComponent(config.revision)}/${file}`,
+            env.remoteHost,
+          ).href;
+          const localUrl = new URL(
+            `${env.localModelPath}${config.modelId}/${file}`,
+            scope.location.origin,
+          ).href;
+          await Promise.all([cache.delete(remoteUrl), cache.delete(localUrl)]);
+        }),
+      );
+    }
+
+    const after = await ModelRegistry.is_pipeline_cached_files(
+      'image-to-text',
+      config.modelId,
+      options,
+    );
+    const filesCached = before.files.filter((file) => file.cached).length;
+    const filesRemaining = after.files.filter((file) => file.cached).length;
+    post({
+      filesCached,
+      filesDeleted: filesCached - filesRemaining,
+      type: 'cache-deleted',
+    });
+  } finally {
+    blockRemoteModelRequests = previousBlockRemoteModelRequests;
+  }
 }
 
 scope.addEventListener('message', (event: MessageEvent<VisionWorkerRequest>) => {

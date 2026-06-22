@@ -283,7 +283,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [ ] Implement runtime-session state.
 - [ ] Implement download state.
 - [ ] Implement settings state.
-- [ ] Implement conversation/workspace-session state.
+- [x] Implement conversation/workspace-session state.
 - [ ] Ensure worker messages are serializable and versioned.
 
 ### Exit criteria
@@ -345,12 +345,12 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [x] Define the IndexedDB database and stores.
 - [x] Add schema migrations.
 - [x] Store model installation metadata.
-- [ ] Store application settings.
-- [ ] Store conversations and workspace sessions.
-- [ ] Store benchmark summaries.
+- [x] Store application settings.
+- [x] Store conversations and workspace sessions.
+- [x] Store benchmark summaries.
 - [x] Implement transactional writes where state must remain consistent.
 - [x] Handle corrupted or incompatible persisted data.
-- [ ] Add a full local-data reset flow.
+- [x] Add a full local-data reset flow.
 
 ### Model artifact storage
 
@@ -361,32 +361,32 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [ ] Track available hashes, ETags, or revision metadata.
 - [ ] Verify all required artifacts before marking a model installed.
 - [x] Implement deletion.
-- [ ] Implement installation verification.
-- [ ] Implement installation repair.
+- [x] Implement installation verification.
+- [~] Implement installation repair.
 
 ### Download manager
 
-- [ ] Implement queued downloads.
-- [ ] Implement per-file and overall progress.
-- [ ] Implement cancellation.
-- [ ] Implement retry with bounded backoff.
+- [x] Implement queued downloads.
+- [x] Implement per-file and overall progress.
+- [x] Implement cancellation.
+- [x] Implement retry with bounded backoff.
 - [ ] Implement resume where technically supported.
-- [ ] Preserve understandable state after page reload.
+- [x] Preserve understandable state after page reload.
 - [x] Check available storage before starting.
 - [x] Warn about metered or very large downloads where detectable.
-- [ ] Handle offline transitions during download.
-- [ ] Handle server and CORS failures.
-- [ ] Prevent two downloads from writing the same model simultaneously.
+- [x] Handle offline transitions during download.
+- [x] Handle server and CORS failures.
+- [x] Prevent two downloads from writing the same model simultaneously.
 
 ### Storage interface
 
-- [ ] Build the Downloads page.
-- [ ] Build the Installed Models page.
-- [ ] Show used and estimated available storage.
-- [ ] Show incomplete installations.
-- [ ] Add retry, cancel, repair, and delete actions.
-- [ ] Confirm destructive deletion.
-- [ ] Explain browser eviction and persistent storage.
+- [x] Build the Downloads page.
+- [x] Build the Installed Models page.
+- [x] Show used and estimated available storage.
+- [x] Show incomplete installations.
+- [x] Add retry, cancel, repair, and delete actions.
+- [x] Confirm destructive deletion.
+- [x] Explain browser eviction and persistent storage.
 - [x] Request persistent storage at an appropriate user-driven moment.
 
 ### Exit criteria
@@ -409,22 +409,22 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [x] Handle worker startup failure.
 - [x] Handle worker crashes.
 - [x] Handle stale events from cancelled or replaced requests.
-- [ ] Add worker-protocol tests.
+- [x] Add worker-protocol tests.
 
 ### Runtime adapter
 
-- [ ] Implement Transformers.js runtime discovery.
+- [x] Implement Transformers.js runtime discovery.
 - [x] Implement model initialization.
 - [x] Select WebGPU when supported.
-- [ ] Implement practical WebAssembly fallback rules.
+- [x] Implement practical WebAssembly fallback rules.
 - [ ] Configure local/cached model resolution.
 - [x] Stream text-generation events.
 - [x] Support non-streaming task results.
 - [x] Implement cancellation.
 - [x] Implement unload and cleanup.
-- [ ] Handle WebGPU device loss.
-- [ ] Map raw errors to Emberbench error codes.
-- [ ] Add runtime contract tests.
+- [x] Handle WebGPU device loss.
+- [x] Map raw errors to Emberbench error codes.
+- [x] Add runtime contract tests.
 
 ### Runtime manager
 
@@ -461,31 +461,31 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Model library
 
-- [ ] Display curated model cards.
+- [x] Display curated model cards.
 - [ ] Filter by capability.
-- [ ] Filter by installed status.
+- [x] Filter by installed status.
 - [ ] Filter by device compatibility.
-- [ ] Show precision and artifact size.
-- [ ] Show source, pinned revision, and license.
+- [x] Show precision and artifact size.
+- [x] Show source, pinned revision, and license.
 - [ ] Show supported workspaces.
 - [x] Show installed/offline status.
-- [ ] Add install, load, unload, and delete actions.
+- [x] Add install, load, unload, and delete actions.
 - [ ] Add model detail pages.
 
 ### General Assistant workspace
 
-- [ ] Build conversation layout.
-- [ ] Create and rename conversations.
-- [ ] Compose and submit prompts.
-- [ ] Render streaming output.
-- [ ] Stop generation.
+- [x] Build conversation layout.
+- [~] Create and rename conversations.
+- [x] Compose and submit prompts.
+- [x] Render streaming output.
+- [x] Stop generation.
 - [ ] Regenerate a response.
 - [ ] Copy message content.
 - [ ] Edit and resubmit a prior user message.
 - [ ] Render Markdown safely.
 - [ ] Render code blocks safely.
-- [ ] Persist conversations locally.
-- [ ] Delete individual conversations.
+- [x] Persist conversations locally.
+- [x] Delete individual conversations.
 - [ ] Expose generation settings behind an advanced panel.
 - [ ] Display the active model and local-processing status.
 
@@ -1104,4 +1104,25 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Add model deletion with cache and metadata cleanup for the text runtime.
 - [x] Add equivalent cache lifecycle support to the vision runtime adapter.
 - [x] Add storage preflight checks before model downloads.
-- [ ] Add model-installation repair and stale-record reconciliation.
+- [x] Add model-installation repair and stale-record reconciliation.
+- [x] Add settings persistence and a full local-data reset flow.
+- [x] Add queued download coordination and duplicate-download prevention.
+- [x] Add download cancellation and bounded retry handling.
+- [x] Persist understandable download state across page reloads.
+- [x] Add application routing for Home, Models, Downloads, and Settings.
+- [x] Weight runtime download progress across declared model artifacts.
+- [x] Add a coordinated delete action to the Downloads page.
+- [x] Extract a shared model-installation service for direct retries from Downloads.
+- [x] Surface active per-file transfer detail in the Downloads page.
+- [x] Handle online-to-offline transitions during active downloads.
+- [x] Map server, HTTP, and CORS download failures to actionable errors.
+- [x] Show used and estimated available browser storage in Downloads.
+- [x] Add an Installed Models view with offline-ready and repair filters.
+- [x] Handle WebGPU device loss during model load and inference.
+- [x] Add direct worker-protocol tests for text and vision workers.
+- [x] Implement runtime discovery and practical WebAssembly fallback rules.
+- [x] Add a force-WebAssembly preference and run a real fallback inference probe.
+- [x] Persist benchmark summaries for completed model runs.
+- [x] Persist workspace sessions and conversation history locally.
+- [x] Build the General Assistant workspace on the session repository.
+- [ ] Add conversation rename, copy, regenerate, and safe Markdown rendering.

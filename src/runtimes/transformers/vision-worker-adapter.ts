@@ -2,7 +2,7 @@ import type { ModelManifest, ModelPrecision } from '../../models/catalog/types';
 import type { VisionWorkerEvent, VisionWorkerRequest } from '../../vision-lab/protocol';
 import { AsyncEventQueue } from '../core/async-event-queue';
 import { assertRunnableInput, requireLoadedRuntime } from '../core/contract';
-import { RuntimeError, toRuntimeError } from '../core/errors';
+import { RuntimeError, toDownloadRuntimeError, toRuntimeError } from '../core/errors';
 import { createRuntimeSession, transitionRuntimeSession } from '../core/session';
 import type {
   ModelInput,
@@ -16,6 +16,11 @@ import type {
   RuntimeRunOptions,
   RuntimeSession,
 } from '../core/types';
+import { ArtifactProgressTracker } from './artifact-progress';
+import {
+  discoverTransformersRuntimeDevice,
+  type TransformersRuntimeDevice,
+} from './runtime-device';
 
 interface VisionWorkerLike {
   addEventListener(type: 'error', listener: (event: Event) => void): void;
@@ -43,22 +48,19 @@ function getPrecision(manifest: ModelManifest): ModelPrecision {
   return artifact.precision;
 }
 
-function workerConfig(manifest: ModelManifest) {
+function workerConfig(manifest: ModelManifest, device: TransformersRuntimeDevice) {
   return {
+    device,
     dtype: getPrecision(manifest),
     modelId: manifest.source.modelId,
     revision: manifest.source.revision,
   };
 }
 
-function readProgress(data: Record<string, unknown>) {
-  const progress = data.progress;
-  return typeof progress === 'number' ? Math.min(100, Math.max(0, progress)) / 100 : 0;
-}
-
 export class TransformersVisionWorkerAdapter implements ModelRuntimeAdapter {
   readonly id = 'transformers-js/vision-worker';
   private activeRequestId: string | null = null;
+  private artifactProgress: ArtifactProgressTracker | null = null;
   private cachePromise: {
     reject: (reason?: unknown) => void;
     resolve: (status: RuntimeCacheStatus) => void;
@@ -80,10 +82,15 @@ export class TransformersVisionWorkerAdapter implements ModelRuntimeAdapter {
   } | null = null;
   private worker: VisionWorkerLike;
   private readonly workerFactory: VisionWorkerFactory;
+  private readonly device: TransformersRuntimeDevice;
   session: RuntimeSession | null = null;
 
-  constructor(workerFactory: VisionWorkerFactory = createVisionWorker) {
+  constructor(
+    workerFactory: VisionWorkerFactory = createVisionWorker,
+    device = discoverTransformersRuntimeDevice(),
+  ) {
     this.workerFactory = workerFactory;
+    this.device = device;
     this.worker = workerFactory();
     this.bindWorker();
   }
@@ -110,7 +117,7 @@ export class TransformersVisionWorkerAdapter implements ModelRuntimeAdapter {
   capabilities(): RuntimeCapabilities {
     return {
       cacheInspection: true,
-      devices: ['webgpu'],
+      devices: ['webgpu', 'wasm'],
       inputKinds: ['image'],
       runtime: 'transformers-js',
       streaming: false,
@@ -130,7 +137,10 @@ export class TransformersVisionWorkerAdapter implements ModelRuntimeAdapter {
       const deleting = new Promise<RuntimeCacheDeleteResult>((resolve, reject) => {
         this.deletePromise = { reject, resolve };
       });
-      this.worker.postMessage({ ...workerConfig(manifest), type: 'delete-cache' });
+      this.worker.postMessage({
+        ...workerConfig(manifest, this.device),
+        type: 'delete-cache',
+      });
       return deleting;
     } catch (error) {
       return Promise.reject(toRuntimeError(error, 'CACHE_DELETE_FAILED'));
@@ -156,17 +166,19 @@ export class TransformersVisionWorkerAdapter implements ModelRuntimeAdapter {
     const queue = new AsyncEventQueue<RuntimeEvent>();
     this.downloadQueue = queue;
     this.currentManifest = manifest;
+    this.artifactProgress = new ArtifactProgressTracker(manifest);
     const abort = () => {
       queue.fail(
         new RuntimeError('ABORTED', 'Vision model download was aborted.', { recoverable: true }),
       );
       this.downloadQueue = null;
+      this.artifactProgress = null;
       this.worker.terminate();
       this.worker = this.workerFactory();
       this.bindWorker();
     };
     options.signal?.addEventListener('abort', abort, { once: true });
-    this.worker.postMessage({ ...workerConfig(manifest), type: 'load' });
+    this.worker.postMessage({ ...workerConfig(manifest, this.device), type: 'load' });
 
     try {
       yield* queue;
@@ -191,7 +203,10 @@ export class TransformersVisionWorkerAdapter implements ModelRuntimeAdapter {
       const inspecting = new Promise<RuntimeCacheStatus>((resolve, reject) => {
         this.cachePromise = { reject, resolve };
       });
-      this.worker.postMessage({ ...workerConfig(manifest), type: 'inspect-cache' });
+      this.worker.postMessage({
+        ...workerConfig(manifest, this.device),
+        type: 'inspect-cache',
+      });
       return inspecting;
     } catch (error) {
       return Promise.reject(toRuntimeError(error, 'INITIALIZATION_FAILED'));
@@ -220,7 +235,7 @@ export class TransformersVisionWorkerAdapter implements ModelRuntimeAdapter {
         this.loadPromise = { reject, resolve };
       });
       this.worker.postMessage({
-        ...workerConfig(manifest),
+        ...workerConfig(manifest, this.device),
         cachedFilesOnly: options.cachedFilesOnly,
         type: 'load',
       });
@@ -279,6 +294,7 @@ export class TransformersVisionWorkerAdapter implements ModelRuntimeAdapter {
   terminate() {
     this.worker.terminate();
     this.failPending(new RuntimeError('ABORTED', 'The vision runtime adapter was terminated.'));
+    this.artifactProgress = null;
     this.session = null;
     this.currentManifest = null;
   }
@@ -297,9 +313,15 @@ export class TransformersVisionWorkerAdapter implements ModelRuntimeAdapter {
 
   private bindWorker() {
     this.worker.addEventListener('message', (event) => this.handleMessage(event.data));
-    this.worker.addEventListener('error', () => {
+    this.worker.addEventListener('error', (event) => {
       this.failPending(
-        new RuntimeError('INITIALIZATION_FAILED', 'The vision worker stopped unexpectedly.'),
+        this.downloadQueue
+          ? toDownloadRuntimeError(
+              event instanceof ErrorEvent
+                ? (event.error ?? new Error(event.message))
+                : new Error('The vision worker stopped unexpectedly.'),
+            )
+          : new RuntimeError('INITIALIZATION_FAILED', 'The vision worker stopped unexpectedly.'),
       );
     });
   }
@@ -311,6 +333,7 @@ export class TransformersVisionWorkerAdapter implements ModelRuntimeAdapter {
     this.deletePromise = null;
     this.downloadQueue?.fail(error);
     this.downloadQueue = null;
+    this.artifactProgress = null;
     this.loadPromise?.reject(error);
     this.loadPromise = null;
     this.runQueue?.fail(error);
@@ -325,18 +348,22 @@ export class TransformersVisionWorkerAdapter implements ModelRuntimeAdapter {
 
   private handleMessage(message: VisionWorkerEvent) {
     switch (message.type) {
-      case 'progress':
+      case 'progress': {
+        const progress = this.artifactProgress?.update(message.data);
         this.downloadQueue?.push({
+          ...progress,
           phase: 'download',
-          progress: readProgress(message.data),
+          progress: progress?.progress ?? 0,
           type: 'progress',
         });
         break;
+      }
       case 'ready':
         if (this.downloadQueue) {
           this.downloadQueue.push({ phase: 'initialize', progress: 1, type: 'progress' });
           this.downloadQueue.end();
           this.downloadQueue = null;
+          this.artifactProgress = null;
         }
         if (this.loadPromise && this.session) {
           this.session = transitionRuntimeSession(this.session, 'ready');
@@ -384,7 +411,9 @@ export class TransformersVisionWorkerAdapter implements ModelRuntimeAdapter {
         this.unloadPromise = null;
         break;
       case 'error': {
-        const error = toRuntimeError(new Error(message.message), 'INITIALIZATION_FAILED');
+        const error = this.downloadQueue
+          ? toDownloadRuntimeError(new Error(message.message))
+          : toRuntimeError(new Error(message.message), 'INITIALIZATION_FAILED');
         if (message.requestId && message.requestId === this.activeRequestId) {
           this.runQueue?.fail(error);
           this.runQueue = null;

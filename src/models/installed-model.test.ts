@@ -40,6 +40,8 @@ describe('installed model lifecycle', () => {
       sourceRevision: getManifest().source.revision,
       status: 'installed',
     });
+    expect(installed).not.toHaveProperty('downloadAttempt');
+    expect(installed).not.toHaveProperty('downloadProgress');
   });
 
   it('rejects invalid transitions and incomplete installation claims', () => {
@@ -52,8 +54,40 @@ describe('installed model lifecycle', () => {
     expect(() => transitionInstalledModel(verifying, 'installed')).toThrow('every required file');
   });
 
+  it('preserves understandable progress after an interrupted download', () => {
+    const downloading = transitionInstalledModel(
+      createInstalledModel(getManifest()),
+      'downloading',
+      {
+        downloadAttempt: 2,
+        downloadProgress: 0.45,
+      },
+    );
+    const failed = transitionInstalledModel(downloading, 'failed', {
+      lastError: 'The page closed before the download completed.',
+    });
+
+    expect(failed).toMatchObject({
+      downloadAttempt: 2,
+      downloadProgress: 0.45,
+      status: 'failed',
+    });
+  });
+
   it('rejects incompatible persisted records', () => {
     expect(parseInstalledModel({ schemaVersion: 2, modelId: 'old-model' })).toBeNull();
     expect(parseInstalledModel(createInstalledModel(getManifest()))).not.toBeNull();
+    expect(
+      parseInstalledModel({
+        ...createInstalledModel(getManifest()),
+        downloadProgress: 2,
+      }),
+    ).toBeNull();
+    expect(
+      parseInstalledModel({
+        ...createInstalledModel(getManifest()),
+        downloadArtifactProgress: -0.1,
+      }),
+    ).toBeNull();
   });
 });

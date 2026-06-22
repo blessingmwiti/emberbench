@@ -60,6 +60,11 @@ export type InstalledModelStatus =
 export interface InstalledModel {
   cachedFiles: number;
   createdAt: string;
+  downloadAttempt?: number;
+  downloadArtifact?: string;
+  downloadArtifactProgress?: number;
+  downloadLoadedBytes?: number;
+  downloadProgress?: number;
   expectedBytes: number;
   installedAt?: string;
   lastError?: string;

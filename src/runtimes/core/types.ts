@@ -61,6 +61,8 @@ export interface RuntimeCapabilities {
 
 export type RuntimeEvent =
   | {
+      artifact?: string;
+      artifactProgress?: number;
       loadedBytes?: number;
       phase: 'download' | 'initialize' | 'run';
       progress: number;

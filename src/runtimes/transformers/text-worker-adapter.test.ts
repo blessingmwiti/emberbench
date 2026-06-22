@@ -44,11 +44,11 @@ async function collect<T>(events: AsyncIterable<T>) {
 
 describe('TransformersTextWorkerAdapter', () => {
   it('describes its runtime capabilities without starting a model', () => {
-    const adapter = new TransformersTextWorkerAdapter(() => new FakeWorker());
+    const adapter = new TransformersTextWorkerAdapter(() => new FakeWorker(), 'wasm');
 
     expect(adapter.capabilities()).toEqual({
       cacheInspection: true,
-      devices: ['webgpu'],
+      devices: ['webgpu', 'wasm'],
       inputKinds: ['text'],
       runtime: 'transformers-js',
       streaming: true,
@@ -58,12 +58,13 @@ describe('TransformersTextWorkerAdapter', () => {
 
   it('loads the pinned manifest configuration and streams generation events', async () => {
     const worker = new FakeWorker();
-    const adapter = new TransformersTextWorkerAdapter(() => worker);
+    const adapter = new TransformersTextWorkerAdapter(() => worker, 'wasm');
     const manifest = getTextManifest();
     const loaded = adapter.load(manifest, { cachedFilesOnly: true });
 
     expect(worker.requests[0]).toMatchObject({
       cachedFilesOnly: true,
+      device: 'wasm',
       dtype: 'q4',
       modelId: manifest.source.modelId,
       revision: manifest.source.revision,
@@ -107,6 +108,27 @@ describe('TransformersTextWorkerAdapter', () => {
     await expect(consume).rejects.toBeInstanceOf(RuntimeError);
   });
 
+  it('moves an active text session to error when WebGPU is lost', async () => {
+    const worker = new FakeWorker();
+    const adapter = new TransformersTextWorkerAdapter(() => worker);
+    const manifest = getTextManifest();
+    const loaded = adapter.load(manifest);
+    worker.emit({ loadTimeMs: 10, model: manifest.source.modelId, type: 'ready' });
+    await loaded;
+
+    const generation = collect(
+      adapter.run({ kind: 'text', text: 'Hello' }, { requestId: 'device-loss' }),
+    );
+    worker.emit({
+      message: 'GPU device was lost',
+      requestId: 'device-loss',
+      type: 'error',
+    });
+
+    await expect(generation).rejects.toMatchObject({ code: 'DEVICE_LOST', recoverable: true });
+    expect(adapter.session?.state).toBe('error');
+  });
+
   it('reports cache completeness through the shared runtime shape', async () => {
     const worker = new FakeWorker();
     const adapter = new TransformersTextWorkerAdapter(() => worker);
@@ -128,6 +150,51 @@ describe('TransformersTextWorkerAdapter', () => {
       cached: true,
       files: [{ cached: true, file: 'onnx/model_q4.onnx' }],
     });
+  });
+
+  it('reports weighted overall progress instead of per-file percentages', async () => {
+    const worker = new FakeWorker();
+    const adapter = new TransformersTextWorkerAdapter(() => worker);
+    const manifest = getTextManifest();
+    const graph = manifest.artifacts[0]!;
+    const events = collect(adapter.download(manifest));
+
+    worker.emit({
+      data: { file: graph.path, progress: 100 },
+      type: 'progress',
+    });
+    worker.emit({ loadTimeMs: 10, model: manifest.source.modelId, type: 'ready' });
+
+    await expect(events).resolves.toEqual([
+      expect.objectContaining({
+        artifact: graph.path,
+        artifactProgress: 1,
+        loadedBytes: graph.sizeBytes,
+        phase: 'download',
+        progress:
+          graph.sizeBytes / manifest.artifacts.reduce((sum, item) => sum + item.sizeBytes, 0),
+        type: 'progress',
+      }),
+      { phase: 'initialize', progress: 1, type: 'progress' },
+    ]);
+  });
+
+  it('maps model-host errors while downloading', async () => {
+    const worker = new FakeWorker();
+    const adapter = new TransformersTextWorkerAdapter(() => worker);
+    const events = collect(adapter.download(getTextManifest()));
+
+    worker.emit({ message: '403 Forbidden', type: 'error' });
+
+    const failure = await events.then(
+      () => null,
+      (error: unknown) => error,
+    );
+    expect(failure).toBeInstanceOf(RuntimeError);
+    expect(failure).toMatchObject({ code: 'DOWNLOAD_FAILED' });
+    expect((failure as RuntimeError).message).toContain(
+      'private, gated, or require authentication',
+    );
   });
 
   it('deletes the pinned pipeline cache through the worker', async () => {

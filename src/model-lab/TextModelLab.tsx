@@ -2,13 +2,23 @@ import { useEffect, useRef, useState } from 'react';
 
 import { formatBytes } from '../diagnostics/format';
 import { findCuratedModel } from '../models/catalog/registry';
-import type { InstalledModel, InstalledModelStatus } from '../models/catalog/types';
-import { createInstalledModel, transitionInstalledModel } from '../models/installed-model';
-import { INSTALLED_MODELS_CHANGED_EVENT, installedModels } from '../storage/database';
+import type { InstalledModel } from '../models/catalog/types';
+import {
+  appSettings,
+  benchmarks,
+  INSTALLED_MODELS_CHANGED_EVENT,
+  installedModels,
+  SETTINGS_CHANGED_EVENT,
+} from '../storage/database';
 import { runDownloadPreflight } from '../storage/download-preflight';
+import { installModel } from '../storage/install-model';
 import type { RuntimeCacheStatus, RuntimeEvent } from '../runtimes/core/types';
 import { RuntimeError } from '../runtimes/core/errors';
 import { TransformersTextWorkerAdapter } from '../runtimes/transformers/text-worker-adapter';
+import {
+  discoverTransformersRuntimeDevice,
+  resolveTransformersRuntimeDevice,
+} from '../runtimes/transformers/runtime-device';
 
 type LabStatus = 'idle' | 'loading' | 'ready' | 'generating' | 'cancelling' | 'error';
 
@@ -41,10 +51,18 @@ function displayRuntimeError(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
+function isAbortError(error: unknown) {
+  return (
+    (error instanceof DOMException && error.name === 'AbortError') ||
+    (error instanceof RuntimeError && error.code === 'ABORTED')
+  );
+}
+
 export function TextModelLab() {
   const adapterRef = useRef<TransformersTextWorkerAdapter | null>(null);
   const activeRequestRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
+  const downloadAbortRef = useRef<AbortController | null>(null);
   const [status, setStatus] = useState<LabStatus>('idle');
   const [prompt, setPrompt] = useState(initialPrompt);
   const [output, setOutput] = useState('');
@@ -61,6 +79,10 @@ export function TextModelLab() {
   const [installRecord, setInstallRecord] = useState<InstalledModel | null>(null);
   const [storageMessage, setStorageMessage] = useState<string | null>(null);
   const [downloadWarning, setDownloadWarning] = useState<string | null>(null);
+  const [confirmLargeDownloads, setConfirmLargeDownloads] = useState(true);
+  const [downloadQueueMessage, setDownloadQueueMessage] = useState<string | null>(null);
+  const [downloadCancellable, setDownloadCancellable] = useState(false);
+  const [runtimeDevice, setRuntimeDevice] = useState(discoverTransformersRuntimeDevice);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -78,18 +100,34 @@ export function TextModelLab() {
           }
         });
     };
+    const refreshSettings = () => {
+      void appSettings
+        .get()
+        .then((settings) => {
+          if (mountedRef.current) {
+            setCachedFilesOnly(settings.defaultCachedFilesOnly);
+            setConfirmLargeDownloads(settings.confirmLargeDownloads);
+            const nextDevice = resolveTransformersRuntimeDevice(settings.runtimePreference);
+            setRuntimeDevice(nextDevice);
+          }
+        })
+        .catch(() => {});
+    };
 
     refreshInstallRecord();
+    refreshSettings();
     window.addEventListener(INSTALLED_MODELS_CHANGED_EVENT, refreshInstallRecord);
+    window.addEventListener(SETTINGS_CHANGED_EVENT, refreshSettings);
     return () => {
       mountedRef.current = false;
       window.removeEventListener(INSTALLED_MODELS_CHANGED_EVENT, refreshInstallRecord);
+      window.removeEventListener(SETTINGS_CHANGED_EVENT, refreshSettings);
       adapterRef.current?.terminate();
     };
   }, []);
 
   function ensureAdapter() {
-    adapterRef.current ??= new TransformersTextWorkerAdapter();
+    adapterRef.current ??= new TransformersTextWorkerAdapter(undefined, runtimeDevice);
     return adapterRef.current;
   }
 
@@ -112,33 +150,6 @@ export function TextModelLab() {
     return nextStatus;
   }
 
-  async function persistInstallRecord(record: InstalledModel) {
-    if (mountedRef.current) {
-      setInstallRecord(record);
-    }
-    try {
-      await installedModels.put(record);
-      if (mountedRef.current) {
-        setStorageMessage(null);
-      }
-    } catch {
-      if (mountedRef.current) {
-        setStorageMessage('The model works, but its installation metadata could not be saved.');
-      }
-    }
-  }
-
-  function beginInstallRecord(existing: InstalledModel | null, status: InstalledModelStatus) {
-    if (!existing || existing.sourceRevision !== textModel.source.revision) {
-      return createInstalledModel(textModel, status);
-    }
-    try {
-      return transitionInstalledModel(existing, status);
-    } catch {
-      return createInstalledModel(textModel, status);
-    }
-  }
-
   async function loadModel(preflightApproved = false) {
     if (!cachedFilesOnly && !preflightApproved) {
       const preflight = await runDownloadPreflight(textModel);
@@ -151,7 +162,7 @@ export function TextModelLab() {
         setError(detail);
         return;
       }
-      if (preflight.status === 'warning') {
+      if (preflight.status === 'warning' && confirmLargeDownloads) {
         setDownloadWarning(detail);
         return;
       }
@@ -163,69 +174,70 @@ export function TextModelLab() {
     setDownloadWarning(null);
     const adapter = ensureAdapter();
     const startedAt = performance.now();
-    let record = beginInstallRecord(
-      await installedModels.get(textModel.id).catch(() => installRecord),
-      cachedFilesOnly ? 'verifying' : 'downloading',
-    );
-    await persistInstallRecord(record);
+    let downloadController: AbortController | null = null;
+    if (!cachedFilesOnly) {
+      downloadController = new AbortController();
+      downloadAbortRef.current = downloadController;
+      setDownloadCancellable(true);
+      setError(null);
+      setProgress(0);
+      setStatus('loading');
+    }
+
     setError(null);
     setProgress(0);
     setStatus('loading');
 
     try {
-      if (!cachedFilesOnly) {
-        for await (const event of adapter.download(textModel)) {
-          if (event.type === 'progress' && mountedRef.current) {
-            setProgress(event.progress * 100);
+      const result = await installModel({
+        adapter,
+        cachedFilesOnly,
+        manifest: textModel,
+        onProgress: (event) => {
+          if (mountedRef.current) setProgress(event.progress * 100);
+        },
+        onQueueChange: (message) => {
+          if (mountedRef.current) setDownloadQueueMessage(message);
+        },
+        onRecord: (record) => {
+          if (mountedRef.current) setInstallRecord(record);
+        },
+        onRetry: (attempt) => {
+          if (mountedRef.current) {
+            setDownloadQueueMessage(`Retrying download · attempt ${attempt} of 3…`);
           }
-        }
-        record = transitionInstalledModel(record, 'verifying');
-        await persistInstallRecord(record);
-      }
-
-      await adapter.load(textModel, { cachedFilesOnly });
+        },
+        signal: downloadController?.signal,
+      });
       if (!mountedRef.current) {
         return;
       }
       setLoadTimeMs(performance.now() - startedAt);
       setProgress(100);
       setStatus('ready');
-      try {
-        const verifiedCache = await readCacheStatus();
-        const cachedFiles = verifiedCache.files.filter((file) => file.cached).length;
-        record = transitionInstalledModel(record, verifiedCache.cached ? 'installed' : 'failed', {
-          cachedFiles,
-          lastError: verifiedCache.cached
-            ? undefined
-            : 'Cache verification found missing model files.',
-          totalFiles: verifiedCache.files.length,
-        });
-        await persistInstallRecord(record);
-      } catch (verificationError) {
-        record = transitionInstalledModel(record, 'failed', {
-          lastError: displayRuntimeError(verificationError, 'Model cache verification failed.'),
-        });
-        await persistInstallRecord(record);
-        if (mountedRef.current) {
-          setStorageMessage(
-            'The model loaded, but its offline installation could not be verified.',
-          );
-        }
-      }
+      setCacheStatus(result.cache);
+      setCacheInspected(true);
     } catch (loadError) {
-      try {
-        record = transitionInstalledModel(record, 'failed', {
-          lastError: displayRuntimeError(loadError, 'Model loading failed.'),
-        });
-        await persistInstallRecord(record);
-      } catch {
-        // The visible runtime error remains the authoritative failure signal.
-      }
       if (mountedRef.current) {
-        setError(displayRuntimeError(loadError, 'Model loading failed.'));
-        setStatus('error');
+        setError(
+          isAbortError(loadError)
+            ? 'Model download cancelled. Retry to reuse any complete cached files.'
+            : displayRuntimeError(loadError, 'Model loading failed.'),
+        );
+        setStatus(isAbortError(loadError) ? 'idle' : 'error');
+      }
+    } finally {
+      downloadAbortRef.current = null;
+      if (mountedRef.current) {
+        setDownloadQueueMessage(null);
+        setDownloadCancellable(false);
       }
     }
+  }
+
+  function cancelDownload() {
+    setDownloadQueueMessage('Cancelling download…');
+    downloadAbortRef.current?.abort();
   }
 
   async function generate() {
@@ -280,6 +292,20 @@ export function TextModelLab() {
         firstTokenMs: event.firstTokenMs ?? null,
         tokenCount: event.tokenCount ?? 0,
       });
+      void benchmarks
+        .put({
+          createdAt: new Date().toISOString(),
+          durationMs: event.durationMs,
+          firstTokenMs: event.firstTokenMs ?? null,
+          id: crypto.randomUUID(),
+          loadTimeMs,
+          modelId: textModel.id,
+          outputUnits: event.tokenCount ?? 0,
+          runtimeDevice,
+          schemaVersion: 1,
+          task: 'text-generation',
+        })
+        .catch(() => {});
     }
   }
 
@@ -319,8 +345,8 @@ export function TextModelLab() {
         </div>
         <p>
           This experiment downloads a quantized 135M-parameter model from Hugging Face, loads it
-          through WebGPU in a worker, and measures generation. The first download is substantial;
-          nothing starts until you ask.
+          through {runtimeDevice === 'webgpu' ? 'WebGPU' : 'WebAssembly'} in a worker, and measures
+          generation. The first download is substantial; nothing starts until you ask.
         </p>
       </div>
 
@@ -351,9 +377,17 @@ export function TextModelLab() {
               </button>
             ) : null}
             {status === 'loading' ? (
-              <button className="button button--primary" disabled type="button">
-                Loading {progress === null ? '' : `${progress.toFixed(0)}%`}
-              </button>
+              <>
+                <button className="button button--primary" disabled type="button">
+                  {downloadQueueMessage ??
+                    `Loading ${progress === null ? '' : `${progress.toFixed(0)}%`}`}
+                </button>
+                {downloadCancellable ? (
+                  <button className="button button--danger" onClick={cancelDownload} type="button">
+                    Cancel download
+                  </button>
+                ) : null}
+              </>
             ) : null}
             {status === 'ready' ? (
               <button
@@ -466,7 +500,7 @@ export function TextModelLab() {
             </div>
             <div>
               <dt>Execution</dt>
-              <dd>WebGPU worker</dd>
+              <dd>{runtimeDevice === 'webgpu' ? 'WebGPU worker' : 'WebAssembly worker'}</dd>
             </div>
             <div>
               <dt>Offline cache</dt>

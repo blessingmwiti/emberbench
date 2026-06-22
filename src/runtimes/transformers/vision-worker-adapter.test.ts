@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { findCuratedModel } from '../../models/catalog/registry';
 import type { VisionWorkerEvent, VisionWorkerRequest } from '../../vision-lab/protocol';
+import { RuntimeError } from '../core/errors';
 import { TransformersVisionWorkerAdapter } from './vision-worker-adapter';
 
 class FakeVisionWorker {
@@ -40,11 +41,12 @@ async function collect<T>(events: AsyncIterable<T>) {
 describe('TransformersVisionWorkerAdapter', () => {
   it('loads a pinned manifest and returns an image result', async () => {
     const worker = new FakeVisionWorker();
-    const adapter = new TransformersVisionWorkerAdapter(() => worker);
+    const adapter = new TransformersVisionWorkerAdapter(() => worker, 'wasm');
     const model = manifest();
     const loading = adapter.load(model);
     expect(worker.requests[0]).toMatchObject({
       dtype: 'q8',
+      device: 'wasm',
       modelId: model.source.modelId,
       revision: model.source.revision,
       type: 'load',
@@ -85,5 +87,73 @@ describe('TransformersVisionWorkerAdapter', () => {
     const deletion = adapter.deleteCache(manifest());
     worker.emit({ filesCached: 5, filesDeleted: 5, type: 'cache-deleted' });
     await expect(deletion).resolves.toEqual({ filesCached: 5, filesDeleted: 5 });
+  });
+
+  it('moves an active vision session to error when WebGPU is lost', async () => {
+    const worker = new FakeVisionWorker();
+    const adapter = new TransformersVisionWorkerAdapter(() => worker);
+    const model = manifest();
+    const loading = adapter.load(model);
+    worker.emit({ loadTimeMs: 10, model: model.source.modelId, type: 'ready' });
+    await loading;
+
+    const result = collect(
+      adapter.run(
+        { data: new Uint8Array([1]).buffer, kind: 'image', mimeType: 'image/png' },
+        { requestId: 'device-loss' },
+      ),
+    );
+    worker.emit({
+      message: 'lost the GPU device',
+      requestId: 'device-loss',
+      type: 'error',
+    });
+
+    await expect(result).rejects.toMatchObject({ code: 'DEVICE_LOST', recoverable: true });
+    expect(adapter.session?.state).toBe('error');
+  });
+
+  it('combines vision artifact progress by byte size', async () => {
+    const worker = new FakeVisionWorker();
+    const adapter = new TransformersVisionWorkerAdapter(() => worker);
+    const model = manifest();
+    const encoder = model.artifacts[0]!;
+    const events = collect(adapter.download(model));
+
+    worker.emit({
+      data: { file: encoder.path, progress: 50 },
+      type: 'progress',
+    });
+    worker.emit({ loadTimeMs: 10, model: model.source.modelId, type: 'ready' });
+
+    const result = await events;
+    expect(result[0]).toMatchObject({
+      artifact: encoder.path,
+      artifactProgress: 0.5,
+      loadedBytes: Math.round(encoder.sizeBytes / 2),
+      phase: 'download',
+      type: 'progress',
+    });
+    expect(result[0]).toHaveProperty(
+      'progress',
+      Math.round(encoder.sizeBytes / 2) /
+        model.artifacts.reduce((sum, item) => sum + item.sizeBytes, 0),
+    );
+  });
+
+  it('maps vision model-host failures while downloading', async () => {
+    const worker = new FakeVisionWorker();
+    const adapter = new TransformersVisionWorkerAdapter(() => worker);
+    const events = collect(adapter.download(manifest()));
+
+    worker.emit({ message: 'TypeError: Failed to fetch because of CORS', type: 'error' });
+
+    const failure = await events.then(
+      () => null,
+      (error: unknown) => error,
+    );
+    expect(failure).toBeInstanceOf(RuntimeError);
+    expect(failure).toMatchObject({ code: 'DOWNLOAD_FAILED', recoverable: true });
+    expect((failure as RuntimeError).message).toContain('cross-origin browser downloads');
   });
 });

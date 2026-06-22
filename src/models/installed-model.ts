@@ -10,6 +10,11 @@ const transitions: Record<InstalledModelStatus, readonly InstalledModelStatus[]>
 
 export interface InstalledModelUpdate {
   cachedFiles?: number;
+  downloadAttempt?: number;
+  downloadArtifact?: string;
+  downloadArtifactProgress?: number;
+  downloadLoadedBytes?: number;
+  downloadProgress?: number;
   lastError?: string;
   totalFiles?: number;
 }
@@ -23,6 +28,7 @@ export function createInstalledModel(
   return {
     cachedFiles: 0,
     createdAt: timestamp,
+    ...(status === 'downloading' ? { downloadAttempt: 1, downloadProgress: 0 } : {}),
     expectedBytes: manifest.artifacts.reduce((total, artifact) => total + artifact.sizeBytes, 0),
     modelId: manifest.id,
     schemaVersion: 1,
@@ -58,6 +64,11 @@ export function transitionInstalledModel(
     }
     next.installedAt = model.installedAt ?? updatedAt;
     delete next.lastError;
+    delete next.downloadAttempt;
+    delete next.downloadArtifact;
+    delete next.downloadArtifactProgress;
+    delete next.downloadLoadedBytes;
+    delete next.downloadProgress;
   } else if (status !== 'failed') {
     delete next.lastError;
   }
@@ -94,6 +105,21 @@ export function parseInstalledModel(value: unknown): InstalledModel | null {
     (model.installedAt !== undefined &&
       (typeof model.installedAt !== 'string' || Number.isNaN(Date.parse(model.installedAt)))) ||
     (model.lastError !== undefined && typeof model.lastError !== 'string') ||
+    (model.downloadAttempt !== undefined &&
+      (!Number.isInteger(model.downloadAttempt) || model.downloadAttempt < 1)) ||
+    (model.downloadArtifact !== undefined && typeof model.downloadArtifact !== 'string') ||
+    (model.downloadArtifactProgress !== undefined &&
+      (!Number.isFinite(model.downloadArtifactProgress) ||
+        model.downloadArtifactProgress < 0 ||
+        model.downloadArtifactProgress > 1)) ||
+    (model.downloadLoadedBytes !== undefined &&
+      (!Number.isFinite(model.downloadLoadedBytes) ||
+        model.downloadLoadedBytes < 0 ||
+        model.downloadLoadedBytes > model.expectedBytes)) ||
+    (model.downloadProgress !== undefined &&
+      (!Number.isFinite(model.downloadProgress) ||
+        model.downloadProgress < 0 ||
+        model.downloadProgress > 1)) ||
     (model.status === 'installed' &&
       (model.totalFiles === 0 || model.cachedFiles !== model.totalFiles))
   ) {

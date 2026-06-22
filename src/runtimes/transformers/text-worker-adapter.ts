@@ -2,7 +2,7 @@ import type { ModelManifest, ModelPrecision } from '../../models/catalog/types';
 import type { TextModelWorkerEvent, TextModelWorkerRequest } from '../../model-lab/protocol';
 import { AsyncEventQueue } from '../core/async-event-queue';
 import { assertRunnableInput, requireLoadedRuntime } from '../core/contract';
-import { RuntimeError, toRuntimeError } from '../core/errors';
+import { RuntimeError, toDownloadRuntimeError, toRuntimeError } from '../core/errors';
 import { createRuntimeSession, transitionRuntimeSession } from '../core/session';
 import type {
   ModelInput,
@@ -16,6 +16,11 @@ import type {
   RuntimeCacheDeleteResult,
   RuntimeSession,
 } from '../core/types';
+import { ArtifactProgressTracker } from './artifact-progress';
+import {
+  discoverTransformersRuntimeDevice,
+  type TransformersRuntimeDevice,
+} from './runtime-device';
 
 interface WorkerLike {
   addEventListener(type: 'error', listener: (event: Event) => void): void;
@@ -43,22 +48,19 @@ function getPrecision(manifest: ModelManifest): ModelPrecision {
   return modelArtifact.precision;
 }
 
-function toWorkerConfig(manifest: ModelManifest) {
+function toWorkerConfig(manifest: ModelManifest, device: TransformersRuntimeDevice) {
   return {
+    device,
     dtype: getPrecision(manifest),
     modelId: manifest.source.modelId,
     revision: manifest.source.revision,
   };
 }
 
-function readProgress(data: Record<string, unknown>) {
-  const progress = data.progress;
-  return typeof progress === 'number' ? Math.min(100, Math.max(0, progress)) / 100 : 0;
-}
-
 export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
   readonly id = 'transformers-js/text-worker';
   private activeRequestId: string | null = null;
+  private artifactProgress: ArtifactProgressTracker | null = null;
   private currentManifest: ModelManifest | null = null;
   private deletePromise: {
     reject: (reason?: unknown) => void;
@@ -78,23 +80,25 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
     reject: (reason?: unknown) => void;
     resolve: () => void;
   } | null = null;
-  private readonly worker: WorkerLike;
+  private worker: WorkerLike;
+  private readonly workerFactory: WorkerFactory;
+  private readonly device: TransformersRuntimeDevice;
   session: RuntimeSession | null = null;
 
-  constructor(workerFactory: WorkerFactory = createTextWorker) {
+  constructor(
+    workerFactory: WorkerFactory = createTextWorker,
+    device = discoverTransformersRuntimeDevice(),
+  ) {
+    this.workerFactory = workerFactory;
+    this.device = device;
     this.worker = workerFactory();
-    this.worker.addEventListener('message', (event) => this.handleMessage(event.data));
-    this.worker.addEventListener('error', () => {
-      this.failPending(
-        new RuntimeError('INITIALIZATION_FAILED', 'The model worker stopped unexpectedly.'),
-      );
-    });
+    this.bindWorker();
   }
 
   capabilities(): RuntimeCapabilities {
     return {
       cacheInspection: true,
-      devices: ['webgpu'],
+      devices: ['webgpu', 'wasm'],
       inputKinds: ['text'],
       runtime: 'transformers-js',
       streaming: true,
@@ -131,13 +135,19 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
     const queue = new AsyncEventQueue<RuntimeEvent>();
     this.downloadQueue = queue;
     this.currentManifest = manifest;
+    this.artifactProgress = new ArtifactProgressTracker(manifest);
     const abort = () => {
       queue.fail(new RuntimeError('ABORTED', 'Model download was aborted.', { recoverable: true }));
       this.downloadQueue = null;
-      this.worker.postMessage({ type: 'cancel' });
+      this.worker.terminate();
+      this.session = null;
+      this.currentManifest = null;
+      this.artifactProgress = null;
+      this.worker = this.workerFactory();
+      this.bindWorker();
     };
     options.signal?.addEventListener('abort', abort, { once: true });
-    this.worker.postMessage({ ...toWorkerConfig(manifest), type: 'load' });
+    this.worker.postMessage({ ...toWorkerConfig(manifest, this.device), type: 'load' });
 
     try {
       yield* queue;
@@ -165,7 +175,10 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
       const deleting = new Promise<RuntimeCacheDeleteResult>((resolve, reject) => {
         this.deletePromise = { reject, resolve };
       });
-      this.worker.postMessage({ ...toWorkerConfig(manifest), type: 'delete-cache' });
+      this.worker.postMessage({
+        ...toWorkerConfig(manifest, this.device),
+        type: 'delete-cache',
+      });
       return deleting;
     } catch (error) {
       return Promise.reject(toRuntimeError(error, 'CACHE_DELETE_FAILED'));
@@ -189,7 +202,10 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
       const inspecting = new Promise<RuntimeCacheStatus>((resolve, reject) => {
         this.cachePromise = { reject, resolve };
       });
-      this.worker.postMessage({ ...toWorkerConfig(manifest), type: 'inspect-cache' });
+      this.worker.postMessage({
+        ...toWorkerConfig(manifest, this.device),
+        type: 'inspect-cache',
+      });
       return inspecting;
     } catch (error) {
       return Promise.reject(toRuntimeError(error, 'INITIALIZATION_FAILED'));
@@ -218,7 +234,7 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
         this.loadPromise = { reject, resolve };
       });
       this.worker.postMessage({
-        ...toWorkerConfig(manifest),
+        ...toWorkerConfig(manifest, this.device),
         cachedFilesOnly: options.cachedFilesOnly,
         type: 'load',
       });
@@ -279,6 +295,7 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
   terminate() {
     this.worker.terminate();
     this.failPending(new RuntimeError('ABORTED', 'The runtime adapter was terminated.'));
+    this.artifactProgress = null;
     this.session = null;
     this.currentManifest = null;
   }
@@ -295,9 +312,25 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
     }
   }
 
+  private bindWorker() {
+    this.worker.addEventListener('message', (event) => this.handleMessage(event.data));
+    this.worker.addEventListener('error', (event) => {
+      this.failPending(
+        this.downloadQueue
+          ? toDownloadRuntimeError(
+              event instanceof ErrorEvent
+                ? (event.error ?? new Error(event.message))
+                : new Error('The model worker stopped unexpectedly.'),
+            )
+          : new RuntimeError('INITIALIZATION_FAILED', 'The model worker stopped unexpectedly.'),
+      );
+    });
+  }
+
   private failPending(error: RuntimeError) {
     this.downloadQueue?.fail(error);
     this.downloadQueue = null;
+    this.artifactProgress = null;
     this.cachePromise?.reject(error);
     this.cachePromise = null;
     this.deletePromise?.reject(error);
@@ -316,18 +349,22 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
 
   private handleMessage(message: TextModelWorkerEvent) {
     switch (message.type) {
-      case 'progress':
+      case 'progress': {
+        const progress = this.artifactProgress?.update(message.data);
         this.downloadQueue?.push({
+          ...progress,
           phase: 'download',
-          progress: readProgress(message.data),
+          progress: progress?.progress ?? 0,
           type: 'progress',
         });
         break;
+      }
       case 'ready': {
         if (this.downloadQueue) {
           this.downloadQueue.push({ phase: 'initialize', progress: 1, type: 'progress' });
           this.downloadQueue.end();
           this.downloadQueue = null;
+          this.artifactProgress = null;
         }
         if (this.loadPromise && this.session) {
           this.session = transitionRuntimeSession(this.session, 'ready');
@@ -366,7 +403,9 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
         }
         break;
       case 'error': {
-        const error = toRuntimeError(new Error(message.message), 'INITIALIZATION_FAILED');
+        const error = this.downloadQueue
+          ? toDownloadRuntimeError(new Error(message.message))
+          : toRuntimeError(new Error(message.message), 'INITIALIZATION_FAILED');
         if (message.requestId && message.requestId === this.activeRequestId) {
           this.runQueue?.fail(error);
           this.finishRun('error');
