@@ -172,9 +172,11 @@ Downloads now reports browser-wide storage usage, estimated remaining quota, tot
 
 The Models route now includes All, Offline ready, and Needs attention views. Current pinned revisions must be fully verified before entering the offline-ready view; failures and stale revisions are grouped for repair.
 
+Runtime adapters now recognize WebGPU device-loss signatures during model preparation and active inference. Pending work fails with a recoverable `DEVICE_LOST` code, the runtime session enters an error state, and the UI receives guidance to reload, reduce GPU pressure, or choose a smaller model. Real hardware-triggered device loss remains a cross-browser validation item.
+
 ## Open feasibility risks
 
-- WebGPU device loss during active inference
+- Real browser propagation of WebGPU device loss during active inference
 - PWA installation behavior outside the in-app Chromium environment
 - Multi-gigabyte storage reliability and eviction
 - Higher-quality captioning, OCR, and visual-question-answering models
@@ -184,4 +186,4 @@ The Models route now includes All, Offline ready, and Needs attention views. Cur
 
 ## Next experiment
 
-Handle WebGPU device loss during model load and inference.
+Add direct worker-protocol tests for text and vision workers.

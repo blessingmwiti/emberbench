@@ -88,6 +88,30 @@ describe('TransformersVisionWorkerAdapter', () => {
     await expect(deletion).resolves.toEqual({ filesCached: 5, filesDeleted: 5 });
   });
 
+  it('moves an active vision session to error when WebGPU is lost', async () => {
+    const worker = new FakeVisionWorker();
+    const adapter = new TransformersVisionWorkerAdapter(() => worker);
+    const model = manifest();
+    const loading = adapter.load(model);
+    worker.emit({ loadTimeMs: 10, model: model.source.modelId, type: 'ready' });
+    await loading;
+
+    const result = collect(
+      adapter.run(
+        { data: new Uint8Array([1]).buffer, kind: 'image', mimeType: 'image/png' },
+        { requestId: 'device-loss' },
+      ),
+    );
+    worker.emit({
+      message: 'lost the GPU device',
+      requestId: 'device-loss',
+      type: 'error',
+    });
+
+    await expect(result).rejects.toMatchObject({ code: 'DEVICE_LOST', recoverable: true });
+    expect(adapter.session?.state).toBe('error');
+  });
+
   it('combines vision artifact progress by byte size', async () => {
     const worker = new FakeVisionWorker();
     const adapter = new TransformersVisionWorkerAdapter(() => worker);

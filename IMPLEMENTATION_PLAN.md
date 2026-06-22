@@ -422,7 +422,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [x] Support non-streaming task results.
 - [x] Implement cancellation.
 - [x] Implement unload and cleanup.
-- [ ] Handle WebGPU device loss.
+- [x] Handle WebGPU device loss.
 - [ ] Map raw errors to Emberbench error codes.
 - [ ] Add runtime contract tests.
 
@@ -1118,4 +1118,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Map server, HTTP, and CORS download failures to actionable errors.
 - [x] Show used and estimated available browser storage in Downloads.
 - [x] Add an Installed Models view with offline-ready and repair filters.
-- [ ] Handle WebGPU device loss during model load and inference.
+- [x] Handle WebGPU device loss during model load and inference.
+- [ ] Add direct worker-protocol tests for text and vision workers.

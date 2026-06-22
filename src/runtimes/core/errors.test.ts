@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { toDownloadRuntimeError } from './errors';
+import { toDownloadRuntimeError, toRuntimeError } from './errors';
 
 describe('download error mapping', () => {
   it.each([
@@ -22,5 +22,18 @@ describe('download error mapping', () => {
       code: 'NETWORK_UNAVAILABLE',
       recoverable: true,
     });
+  });
+
+  it('recognizes device loss during download and inference', () => {
+    expect(toDownloadRuntimeError(new Error('GPU device was lost'), true)).toMatchObject({
+      code: 'DEVICE_LOST',
+      recoverable: true,
+    });
+    expect(toRuntimeError(new Error('lost the GPU device'), 'INITIALIZATION_FAILED')).toMatchObject(
+      {
+        code: 'DEVICE_LOST',
+        recoverable: true,
+      },
+    );
   });
 });

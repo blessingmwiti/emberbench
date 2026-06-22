@@ -51,11 +51,19 @@ export function toRuntimeError(error: unknown, fallbackCode: RuntimeErrorCode) {
       recoverable: true,
     });
   }
-  if (normalized.includes('device lost')) {
-    return new RuntimeError('DEVICE_LOST', message, {
-      cause: error,
-      recoverable: true,
-    });
+  if (
+    normalized.includes('device lost') ||
+    normalized.includes('lost the gpu device') ||
+    normalized.includes('gpu device was lost')
+  ) {
+    return new RuntimeError(
+      'DEVICE_LOST',
+      'The WebGPU device was lost. Reload the model and retry; if this repeats, close other GPU-heavy tabs or choose a smaller model.',
+      {
+        cause: error,
+        recoverable: true,
+      },
+    );
   }
   if (normalized.includes('abort') || normalized.includes('cancel')) {
     return new RuntimeError('ABORTED', message, {
@@ -77,6 +85,17 @@ export function toDownloadRuntimeError(
   const original = error instanceof Error ? error.message : 'The model download failed.';
   const message = original.toLowerCase();
 
+  if (
+    message.includes('device lost') ||
+    message.includes('lost the gpu device') ||
+    message.includes('gpu device was lost')
+  ) {
+    return new RuntimeError(
+      'DEVICE_LOST',
+      'The WebGPU device was lost while preparing the model. Retry the load; if this repeats, close other GPU-heavy tabs or choose a smaller model.',
+      { cause: error, recoverable: true },
+    );
+  }
   if (!online) {
     return new RuntimeError(
       'NETWORK_UNAVAILABLE',

@@ -107,6 +107,27 @@ describe('TransformersTextWorkerAdapter', () => {
     await expect(consume).rejects.toBeInstanceOf(RuntimeError);
   });
 
+  it('moves an active text session to error when WebGPU is lost', async () => {
+    const worker = new FakeWorker();
+    const adapter = new TransformersTextWorkerAdapter(() => worker);
+    const manifest = getTextManifest();
+    const loaded = adapter.load(manifest);
+    worker.emit({ loadTimeMs: 10, model: manifest.source.modelId, type: 'ready' });
+    await loaded;
+
+    const generation = collect(
+      adapter.run({ kind: 'text', text: 'Hello' }, { requestId: 'device-loss' }),
+    );
+    worker.emit({
+      message: 'GPU device was lost',
+      requestId: 'device-loss',
+      type: 'error',
+    });
+
+    await expect(generation).rejects.toMatchObject({ code: 'DEVICE_LOST', recoverable: true });
+    expect(adapter.session?.state).toBe('error');
+  });
+
   it('reports cache completeness through the shared runtime shape', async () => {
     const worker = new FakeWorker();
     const adapter = new TransformersTextWorkerAdapter(() => worker);
