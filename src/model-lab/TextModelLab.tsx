@@ -12,6 +12,7 @@ import {
 } from '../storage/database';
 import { runDownloadPreflight } from '../storage/download-preflight';
 import { modelDownloads, type DownloadLease } from '../storage/download-coordinator';
+import { withBoundedRetry } from '../storage/retry';
 import type { RuntimeCacheStatus, RuntimeEvent } from '../runtimes/core/types';
 import { RuntimeError } from '../runtimes/core/errors';
 import { TransformersTextWorkerAdapter } from '../runtimes/transformers/text-worker-adapter';
@@ -47,10 +48,18 @@ function displayRuntimeError(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
+function isAbortError(error: unknown) {
+  return (
+    (error instanceof DOMException && error.name === 'AbortError') ||
+    (error instanceof RuntimeError && error.code === 'ABORTED')
+  );
+}
+
 export function TextModelLab() {
   const adapterRef = useRef<TransformersTextWorkerAdapter | null>(null);
   const activeRequestRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
+  const downloadAbortRef = useRef<AbortController | null>(null);
   const [status, setStatus] = useState<LabStatus>('idle');
   const [prompt, setPrompt] = useState(initialPrompt);
   const [output, setOutput] = useState('');
@@ -69,6 +78,7 @@ export function TextModelLab() {
   const [downloadWarning, setDownloadWarning] = useState<string | null>(null);
   const [confirmLargeDownloads, setConfirmLargeDownloads] = useState(true);
   const [downloadQueueMessage, setDownloadQueueMessage] = useState<string | null>(null);
+  const [downloadCancellable, setDownloadCancellable] = useState(false);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -186,18 +196,28 @@ export function TextModelLab() {
     const adapter = ensureAdapter();
     const startedAt = performance.now();
     let downloadLease: DownloadLease | null = null;
+    let downloadController: AbortController | null = null;
     if (!cachedFilesOnly) {
+      downloadController = new AbortController();
+      downloadAbortRef.current = downloadController;
+      setDownloadCancellable(true);
       setError(null);
       setProgress(0);
       setStatus('loading');
       setDownloadQueueMessage('Waiting for the model download slot…');
       try {
-        downloadLease = await modelDownloads.acquire(textModel.id);
+        downloadLease = await modelDownloads.acquire(textModel.id, downloadController.signal);
         setDownloadQueueMessage(null);
       } catch (queueError) {
-        setError(displayRuntimeError(queueError, 'The model download could not be queued.'));
-        setStatus('error');
+        setError(
+          isAbortError(queueError)
+            ? 'Model download cancelled.'
+            : displayRuntimeError(queueError, 'The model download could not be queued.'),
+        );
+        setStatus(isAbortError(queueError) ? 'idle' : 'error');
         setDownloadQueueMessage(null);
+        setDownloadCancellable(false);
+        downloadAbortRef.current = null;
         return;
       }
     }
@@ -213,11 +233,26 @@ export function TextModelLab() {
 
     try {
       if (!cachedFilesOnly) {
-        for await (const event of adapter.download(textModel)) {
-          if (event.type === 'progress' && mountedRef.current) {
-            setProgress(event.progress * 100);
-          }
-        }
+        await withBoundedRetry(
+          async () => {
+            for await (const event of adapter.download(textModel, {
+              signal: downloadController?.signal,
+            })) {
+              if (event.type === 'progress' && mountedRef.current) {
+                setProgress(event.progress * 100);
+              }
+            }
+          },
+          {
+            onRetry: (attempt) => {
+              if (mountedRef.current) {
+                setDownloadQueueMessage(`Retrying download · attempt ${attempt} of 3…`);
+              }
+            },
+            signal: downloadController?.signal,
+          },
+        );
+        if (mountedRef.current) setDownloadQueueMessage(null);
         record = transitionInstalledModel(record, 'verifying');
         await persistInstallRecord(record);
       }
@@ -261,13 +296,26 @@ export function TextModelLab() {
         // The visible runtime error remains the authoritative failure signal.
       }
       if (mountedRef.current) {
-        setError(displayRuntimeError(loadError, 'Model loading failed.'));
-        setStatus('error');
+        setError(
+          isAbortError(loadError)
+            ? 'Model download cancelled. Retry to reuse any complete cached files.'
+            : displayRuntimeError(loadError, 'Model loading failed.'),
+        );
+        setStatus(isAbortError(loadError) ? 'idle' : 'error');
       }
     } finally {
       downloadLease?.release();
-      if (mountedRef.current) setDownloadQueueMessage(null);
+      downloadAbortRef.current = null;
+      if (mountedRef.current) {
+        setDownloadQueueMessage(null);
+        setDownloadCancellable(false);
+      }
     }
+  }
+
+  function cancelDownload() {
+    setDownloadQueueMessage('Cancelling download…');
+    downloadAbortRef.current?.abort();
   }
 
   async function generate() {
@@ -393,10 +441,17 @@ export function TextModelLab() {
               </button>
             ) : null}
             {status === 'loading' ? (
-              <button className="button button--primary" disabled type="button">
-                {downloadQueueMessage ??
-                  `Loading ${progress === null ? '' : `${progress.toFixed(0)}%`}`}
-              </button>
+              <>
+                <button className="button button--primary" disabled type="button">
+                  {downloadQueueMessage ??
+                    `Loading ${progress === null ? '' : `${progress.toFixed(0)}%`}`}
+                </button>
+                {downloadCancellable ? (
+                  <button className="button button--danger" onClick={cancelDownload} type="button">
+                    Cancel download
+                  </button>
+                ) : null}
+              </>
             ) : null}
             {status === 'ready' ? (
               <button

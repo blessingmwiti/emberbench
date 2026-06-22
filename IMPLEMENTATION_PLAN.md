@@ -368,8 +368,8 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 - [x] Implement queued downloads.
 - [ ] Implement per-file and overall progress.
-- [ ] Implement cancellation.
-- [ ] Implement retry with bounded backoff.
+- [x] Implement cancellation.
+- [x] Implement retry with bounded backoff.
 - [ ] Implement resume where technically supported.
 - [ ] Preserve understandable state after page reload.
 - [x] Check available storage before starting.
@@ -1107,4 +1107,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Add model-installation repair and stale-record reconciliation.
 - [x] Add settings persistence and a full local-data reset flow.
 - [x] Add queued download coordination and duplicate-download prevention.
-- [ ] Add download cancellation and bounded retry handling.
+- [x] Add download cancellation and bounded retry handling.
+- [ ] Persist understandable download state across page reloads.

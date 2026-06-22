@@ -170,4 +170,4 @@ An explicit runtime probe then downloaded the pinned SmolLM2 revision, initializ
 
 ## Next experiment
 
-Add download cancellation and bounded retry handling.
+Persist understandable download state across page reloads.

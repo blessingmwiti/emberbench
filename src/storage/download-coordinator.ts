@@ -102,7 +102,6 @@ export class ModelDownloadCoordinator {
     const modelLease = await this.holdBrowserLock(`emberbench:model-download:${entry.modelId}`, {
       ifAvailable: true,
       mode: 'exclusive',
-      signal: entry.signal,
     });
     if (!modelLease) {
       throw new DuplicateDownloadError(entry.modelId);

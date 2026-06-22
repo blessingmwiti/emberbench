@@ -78,17 +78,14 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
     reject: (reason?: unknown) => void;
     resolve: () => void;
   } | null = null;
-  private readonly worker: WorkerLike;
+  private worker: WorkerLike;
+  private readonly workerFactory: WorkerFactory;
   session: RuntimeSession | null = null;
 
   constructor(workerFactory: WorkerFactory = createTextWorker) {
+    this.workerFactory = workerFactory;
     this.worker = workerFactory();
-    this.worker.addEventListener('message', (event) => this.handleMessage(event.data));
-    this.worker.addEventListener('error', () => {
-      this.failPending(
-        new RuntimeError('INITIALIZATION_FAILED', 'The model worker stopped unexpectedly.'),
-      );
-    });
+    this.bindWorker();
   }
 
   capabilities(): RuntimeCapabilities {
@@ -134,7 +131,11 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
     const abort = () => {
       queue.fail(new RuntimeError('ABORTED', 'Model download was aborted.', { recoverable: true }));
       this.downloadQueue = null;
-      this.worker.postMessage({ type: 'cancel' });
+      this.worker.terminate();
+      this.session = null;
+      this.currentManifest = null;
+      this.worker = this.workerFactory();
+      this.bindWorker();
     };
     options.signal?.addEventListener('abort', abort, { once: true });
     this.worker.postMessage({ ...toWorkerConfig(manifest), type: 'load' });
@@ -293,6 +294,15 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
         `The ${this.id} adapter does not support ${manifest.requirements.task}.`,
       );
     }
+  }
+
+  private bindWorker() {
+    this.worker.addEventListener('message', (event) => this.handleMessage(event.data));
+    this.worker.addEventListener('error', () => {
+      this.failPending(
+        new RuntimeError('INITIALIZATION_FAILED', 'The model worker stopped unexpectedly.'),
+      );
+    });
   }
 
   private failPending(error: RuntimeError) {

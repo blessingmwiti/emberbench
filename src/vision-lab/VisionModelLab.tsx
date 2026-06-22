@@ -15,6 +15,7 @@ import {
 } from '../storage/database';
 import { runDownloadPreflight } from '../storage/download-preflight';
 import { modelDownloads, type DownloadLease } from '../storage/download-coordinator';
+import { withBoundedRetry } from '../storage/retry';
 
 type VisionStatus = 'idle' | 'loading' | 'ready' | 'running' | 'cancelling' | 'error';
 
@@ -35,11 +36,19 @@ function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
+function isAbortError(error: unknown) {
+  return (
+    (error instanceof DOMException && error.name === 'AbortError') ||
+    (error instanceof RuntimeError && error.code === 'ABORTED')
+  );
+}
+
 export function VisionModelLab() {
   const adapterRef = useRef<TransformersVisionWorkerAdapter | null>(null);
   const requestRef = useRef<string | null>(null);
   const previewUrlRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
+  const downloadAbortRef = useRef<AbortController | null>(null);
   const [status, setStatus] = useState<VisionStatus>('idle');
   const [progress, setProgress] = useState<number | null>(null);
   const [loadTimeMs, setLoadTimeMs] = useState<number | null>(null);
@@ -59,6 +68,7 @@ export function VisionModelLab() {
   const [downloadWarning, setDownloadWarning] = useState<string | null>(null);
   const [confirmLargeDownloads, setConfirmLargeDownloads] = useState(true);
   const [downloadQueueMessage, setDownloadQueueMessage] = useState<string | null>(null);
+  const [downloadCancellable, setDownloadCancellable] = useState(false);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -181,18 +191,28 @@ export function VisionModelLab() {
     const adapter = ensureAdapter();
     const startedAt = performance.now();
     let downloadLease: DownloadLease | null = null;
+    let downloadController: AbortController | null = null;
     if (!cachedFilesOnly) {
+      downloadController = new AbortController();
+      downloadAbortRef.current = downloadController;
+      setDownloadCancellable(true);
       setError(null);
       setProgress(0);
       setStatus('loading');
       setDownloadQueueMessage('Waiting for the model download slot…');
       try {
-        downloadLease = await modelDownloads.acquire(visionModel.id);
+        downloadLease = await modelDownloads.acquire(visionModel.id, downloadController.signal);
         setDownloadQueueMessage(null);
       } catch (queueError) {
-        setError(errorMessage(queueError, 'The vision model download could not be queued.'));
-        setStatus('error');
+        setError(
+          isAbortError(queueError)
+            ? 'Vision model download cancelled.'
+            : errorMessage(queueError, 'The vision model download could not be queued.'),
+        );
+        setStatus(isAbortError(queueError) ? 'idle' : 'error');
         setDownloadQueueMessage(null);
+        setDownloadCancellable(false);
+        downloadAbortRef.current = null;
         return;
       }
     }
@@ -208,11 +228,26 @@ export function VisionModelLab() {
 
     try {
       if (!cachedFilesOnly) {
-        for await (const event of adapter.download(visionModel)) {
-          if (event.type === 'progress' && mountedRef.current) {
-            setProgress(event.progress * 100);
-          }
-        }
+        await withBoundedRetry(
+          async () => {
+            for await (const event of adapter.download(visionModel, {
+              signal: downloadController?.signal,
+            })) {
+              if (event.type === 'progress' && mountedRef.current) {
+                setProgress(event.progress * 100);
+              }
+            }
+          },
+          {
+            onRetry: (attempt) => {
+              if (mountedRef.current) {
+                setDownloadQueueMessage(`Retrying download · attempt ${attempt} of 3…`);
+              }
+            },
+            signal: downloadController?.signal,
+          },
+        );
+        if (mountedRef.current) setDownloadQueueMessage(null);
         record = transitionInstalledModel(record, 'verifying');
         await persistRecord(record);
       }
@@ -248,13 +283,26 @@ export function VisionModelLab() {
         // The visible runtime error remains the authoritative failure signal.
       }
       if (mountedRef.current) {
-        setError(errorMessage(loadError, 'Vision model loading failed.'));
-        setStatus('error');
+        setError(
+          isAbortError(loadError)
+            ? 'Vision model download cancelled. Retry to reuse any complete cached files.'
+            : errorMessage(loadError, 'Vision model loading failed.'),
+        );
+        setStatus(isAbortError(loadError) ? 'idle' : 'error');
       }
     } finally {
       downloadLease?.release();
-      if (mountedRef.current) setDownloadQueueMessage(null);
+      downloadAbortRef.current = null;
+      if (mountedRef.current) {
+        setDownloadQueueMessage(null);
+        setDownloadCancellable(false);
+      }
     }
+  }
+
+  function cancelDownload() {
+    setDownloadQueueMessage('Cancelling download…');
+    downloadAbortRef.current?.abort();
   }
 
   async function useSample() {
@@ -447,10 +495,17 @@ export function VisionModelLab() {
               </button>
             ) : null}
             {status === 'loading' ? (
-              <button className="button button--primary" disabled type="button">
-                {downloadQueueMessage ??
-                  `Loading ${progress === null ? '' : `${progress.toFixed(0)}%`}`}
-              </button>
+              <>
+                <button className="button button--primary" disabled type="button">
+                  {downloadQueueMessage ??
+                    `Loading ${progress === null ? '' : `${progress.toFixed(0)}%`}`}
+                </button>
+                {downloadCancellable ? (
+                  <button className="button button--danger" onClick={cancelDownload} type="button">
+                    Cancel download
+                  </button>
+                ) : null}
+              </>
             ) : null}
             {status === 'ready' ? (
               <button
