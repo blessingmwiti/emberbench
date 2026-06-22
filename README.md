@@ -10,8 +10,9 @@ The project is intended for much more than chat. Emberbench provides reusable wo
 
 > **Project status:** active browser prototype. The application now includes curated model
 > installation, persistent offline downloads, WebGPU with WebAssembly fallback, local benchmark
-> history, and a locally persisted General Assistant workspace. Model coverage, browser support,
-> and memory estimates remain subject to device testing.
+> history, and a locally persisted General Assistant workspace with safe Markdown and code-block
+> rendering. Model coverage, browser support, and memory estimates remain subject to device
+> testing.
 
 ## Why Emberbench?
 

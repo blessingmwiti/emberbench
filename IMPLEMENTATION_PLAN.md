@@ -482,8 +482,8 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [x] Regenerate a response.
 - [x] Copy message content.
 - [ ] Edit and resubmit a prior user message.
-- [ ] Render Markdown safely.
-- [ ] Render code blocks safely.
+- [x] Render Markdown safely.
+- [x] Render code blocks safely.
 - [x] Persist conversations locally.
 - [x] Delete individual conversations.
 - [ ] Expose generation settings behind an advanced panel.
@@ -1126,4 +1126,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Persist workspace sessions and conversation history locally.
 - [x] Build the General Assistant workspace on the session repository.
 - [x] Add conversation rename, copy, and regenerate controls.
-- [ ] Add safe Markdown and code-block rendering to General Assistant.
+- [x] Add safe Markdown and code-block rendering to General Assistant.
+- [ ] Add edit-and-resubmit support for prior user messages.

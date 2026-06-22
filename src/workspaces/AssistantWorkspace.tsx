@@ -18,6 +18,7 @@ import {
   type WorkspaceSession,
 } from './session';
 import { copyText } from './clipboard';
+import { MarkdownContent } from './MarkdownContent';
 
 const curatedAssistantModel = findCuratedModel('smollm2-135m-q4');
 if (!curatedAssistantModel) throw new Error('The General Assistant model is missing.');
@@ -281,7 +282,9 @@ export function AssistantWorkspace() {
                   key={message.id}
                 >
                   <span>{message.role === 'user' ? 'You' : 'Assistant'}</span>
-                  <p>{message.content}</p>
+                  <div className="assistant-message__content">
+                    <MarkdownContent content={message.content} />
+                  </div>
                   <button onClick={() => void copyMessage(message.content)} type="button">
                     Copy
                   </button>
@@ -296,7 +299,9 @@ export function AssistantWorkspace() {
             {streamingText ? (
               <article className="assistant-message assistant-message--assistant">
                 <span>Assistant</span>
-                <p>{streamingText}</p>
+                <div className="assistant-message__content">
+                  <MarkdownContent content={streamingText} />
+                </div>
               </article>
             ) : null}
           </div>
