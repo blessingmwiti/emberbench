@@ -8,7 +8,10 @@ Open the application, choose a compatible model, download it once, and use it on
 
 The project is intended for much more than chat. Emberbench provides reusable workspaces for software development, cybersecurity, writing, research, document analysis, image understanding, speech transcription, and other technical or creative workflows.
 
-> **Project status:** concept and architecture phase. The model list, browser support, memory estimates, and implementation details below are initial targets and may change after benchmarking.
+> **Project status:** active browser prototype. The application now includes curated model
+> installation, persistent offline downloads, WebGPU with WebAssembly fallback, local benchmark
+> history, and a locally persisted General Assistant workspace. Model coverage, browser support,
+> and memory estimates remain subject to device testing.
 
 ## Why Emberbench?
 

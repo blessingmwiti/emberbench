@@ -10,7 +10,14 @@ import {
   workspaceSessions,
 } from '../storage/database';
 import { installModel } from '../storage/install-model';
-import { appendWorkspaceMessage, createWorkspaceSession, type WorkspaceSession } from './session';
+import {
+  appendWorkspaceMessage,
+  createWorkspaceSession,
+  removeLastAssistantMessage,
+  renameWorkspaceSession,
+  type WorkspaceSession,
+} from './session';
+import { copyText } from './clipboard';
 
 const curatedAssistantModel = findCuratedModel('smollm2-135m-q4');
 if (!curatedAssistantModel) throw new Error('The General Assistant model is missing.');
@@ -33,6 +40,9 @@ export function AssistantWorkspace() {
   const [streamingText, setStreamingText] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'running' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [renameId, setRenameId] = useState<string | null>(null);
+  const [renameTitle, setRenameTitle] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -80,18 +90,10 @@ export function AssistantWorkspace() {
     return adapter;
   }
 
-  async function sendMessage() {
-    const content = draft.trim();
-    if (!content || status === 'running' || status === 'loading') return;
-    setDraft('');
+  async function generateReply(activeSession: WorkspaceSession) {
     setError(null);
+    setNotice(null);
     setStreamingText('');
-
-    let activeSession =
-      session ?? createWorkspaceSession('assistant', 'Untitled session', assistantModel.id);
-    activeSession = appendWorkspaceMessage(activeSession, 'user', content);
-    await workspaceSessions.put(activeSession);
-    setSession(activeSession);
 
     try {
       const adapter = await ensureReady();
@@ -129,6 +131,54 @@ export function AssistantWorkspace() {
           : 'The local assistant could not complete this reply.',
       );
       setStatus('error');
+    }
+  }
+
+  async function sendMessage() {
+    const content = draft.trim();
+    if (!content || status === 'running' || status === 'loading') return;
+    setDraft('');
+
+    let activeSession =
+      session ?? createWorkspaceSession('assistant', 'Untitled session', assistantModel.id);
+    activeSession = appendWorkspaceMessage(activeSession, 'user', content);
+    await workspaceSessions.put(activeSession);
+    setSession(activeSession);
+    await generateReply(activeSession);
+  }
+
+  async function regenerateReply() {
+    if (!session || status === 'running' || status === 'loading') return;
+    try {
+      const retrySession = removeLastAssistantMessage(session);
+      await workspaceSessions.put(retrySession);
+      setSession(retrySession);
+      await generateReply(retrySession);
+    } catch (retryError) {
+      setError(
+        retryError instanceof Error ? retryError.message : 'The response cannot be retried.',
+      );
+    }
+  }
+
+  async function saveRename(item: WorkspaceSession) {
+    try {
+      const renamed = renameWorkspaceSession(item, renameTitle);
+      await workspaceSessions.put(renamed);
+      setSession((current) => (current?.id === renamed.id ? renamed : current));
+      setRenameId(null);
+      setRenameTitle('');
+    } catch (renameError) {
+      setError(renameError instanceof Error ? renameError.message : 'Conversation rename failed.');
+    }
+  }
+
+  async function copyMessage(content: string) {
+    try {
+      await copyText(content);
+      setNotice('Message copied.');
+    } catch {
+      setNotice('This browser did not allow clipboard access.');
     }
   }
 
@@ -177,17 +227,46 @@ export function AssistantWorkspace() {
           <div className="assistant-session-list">
             {sessions.map((item) => (
               <div className={session?.id === item.id ? 'is-active' : ''} key={item.id}>
-                <button onClick={() => setSession(item)} type="button">
-                  <strong>{item.title}</strong>
-                  <span>{new Date(item.updatedAt).toLocaleString()}</span>
-                </button>
-                <button
-                  aria-label={`Delete ${item.title}`}
-                  onClick={() => void deleteSession(item)}
-                  type="button"
-                >
-                  ×
-                </button>
+                {renameId === item.id ? (
+                  <form
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void saveRename(item);
+                    }}
+                  >
+                    <input
+                      aria-label="Conversation title"
+                      autoFocus
+                      onChange={(event) => setRenameTitle(event.target.value)}
+                      value={renameTitle}
+                    />
+                    <button type="submit">Save</button>
+                  </form>
+                ) : (
+                  <button onClick={() => setSession(item)} type="button">
+                    <strong>{item.title}</strong>
+                    <span>{new Date(item.updatedAt).toLocaleString()}</span>
+                  </button>
+                )}
+                <div>
+                  <button
+                    aria-label={`Rename ${item.title}`}
+                    onClick={() => {
+                      setRenameId(item.id);
+                      setRenameTitle(item.title);
+                    }}
+                    type="button"
+                  >
+                    ✎
+                  </button>
+                  <button
+                    aria-label={`Delete ${item.title}`}
+                    onClick={() => void deleteSession(item)}
+                    type="button"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -203,6 +282,9 @@ export function AssistantWorkspace() {
                 >
                   <span>{message.role === 'user' ? 'You' : 'Assistant'}</span>
                   <p>{message.content}</p>
+                  <button onClick={() => void copyMessage(message.content)} type="button">
+                    Copy
+                  </button>
                 </article>
               ))
             ) : (
@@ -220,6 +302,16 @@ export function AssistantWorkspace() {
           </div>
 
           <div className="assistant-composer">
+            {session?.messages.at(-1)?.role === 'assistant' ? (
+              <button
+                className="assistant-regenerate"
+                disabled={busy}
+                onClick={() => void regenerateReply()}
+                type="button"
+              >
+                Regenerate last response
+              </button>
+            ) : null}
             <label htmlFor="assistant-draft">Message</label>
             <textarea
               disabled={busy}
@@ -260,6 +352,11 @@ export function AssistantWorkspace() {
           {error ? (
             <p className="assistant-error" role="alert">
               {error} <a href="#/models">Open Models</a>
+            </p>
+          ) : null}
+          {notice ? (
+            <p className="assistant-notice" role="status">
+              {notice}
             </p>
           ) : null}
         </div>

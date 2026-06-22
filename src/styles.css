@@ -55,7 +55,7 @@ a:focus-visible {
 
 .app-shell {
   min-height: 100vh;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 .site-header {
@@ -565,7 +565,7 @@ h2 {
 
 .assistant-session-list > div {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   border: 1px solid transparent;
   border-radius: 4px;
 }
@@ -576,12 +576,35 @@ h2 {
 }
 
 .assistant-session-list button {
+  min-width: 0;
   padding: 10px;
   border: 0;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
   text-align: left;
+}
+
+.assistant-session-list form {
+  padding: 7px;
+  display: flex;
+  gap: 5px;
+}
+
+.assistant-session-list input {
+  min-width: 0;
+  padding: 6px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--cream);
+}
+
+.assistant-session-list > div > div {
+  display: flex;
+}
+
+.assistant-session-list > div > div button {
+  padding-inline: 7px;
 }
 
 .assistant-session-list strong,
@@ -654,9 +677,33 @@ h2 {
   white-space: pre-wrap;
 }
 
+.assistant-message > button {
+  margin-top: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.assistant-message > button:hover {
+  color: var(--cream);
+}
+
 .assistant-composer {
   padding: 20px;
   border-top: 1px solid var(--line);
+}
+
+.assistant-regenerate {
+  margin-bottom: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ember-light);
+  cursor: pointer;
+  font-size: 11px;
 }
 
 .assistant-composer label {
@@ -703,6 +750,13 @@ h2 {
   padding: 12px 20px;
   border-top: 1px solid #743c30;
   color: var(--ember-light);
+}
+
+.assistant-notice {
+  margin: 0;
+  padding: 10px 20px;
+  border-top: 1px solid var(--line);
+  color: var(--green);
 }
 
 .assistant-error a {

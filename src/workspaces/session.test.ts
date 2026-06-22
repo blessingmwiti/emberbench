@@ -1,12 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { appendWorkspaceMessage, createWorkspaceSession, parseWorkspaceSession } from './session';
+import {
+  appendWorkspaceMessage,
+  createWorkspaceSession,
+  parseWorkspaceSession,
+  removeLastAssistantMessage,
+  renameWorkspaceSession,
+} from './session';
 
 describe('workspace sessions', () => {
   beforeEach(() => {
-    vi.spyOn(crypto, 'randomUUID')
-      .mockReturnValueOnce('00000000-0000-4000-8000-000000000001')
-      .mockReturnValueOnce('00000000-0000-4000-8000-000000000002');
+    vi.spyOn(crypto, 'randomUUID').mockReturnValue('00000000-0000-4000-8000-000000000001');
   });
 
   afterEach(() => {
@@ -45,5 +49,18 @@ describe('workspace sessions', () => {
         messages: [{ content: '', createdAt: session.createdAt, id: 'bad', role: 'user' }],
       }),
     ).toBeNull();
+  });
+
+  it('renames sessions and removes only the latest assistant response', () => {
+    let session = createWorkspaceSession('assistant');
+    session = appendWorkspaceMessage(session, 'user', 'Question');
+    session = appendWorkspaceMessage(session, 'assistant', 'First answer');
+    session = renameWorkspaceSession(session, '  Research notes  ');
+    expect(session.title).toBe('Research notes');
+
+    const retry = removeLastAssistantMessage(session);
+    expect(retry.messages).toHaveLength(1);
+    expect(retry.messages[0]?.role).toBe('user');
+    expect(() => removeLastAssistantMessage(retry)).toThrow('no assistant response');
   });
 });
