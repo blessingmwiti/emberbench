@@ -16,6 +16,7 @@ import type {
   RuntimeCacheDeleteResult,
   RuntimeSession,
 } from '../core/types';
+import { ArtifactProgressTracker } from './artifact-progress';
 
 interface WorkerLike {
   addEventListener(type: 'error', listener: (event: Event) => void): void;
@@ -51,14 +52,10 @@ function toWorkerConfig(manifest: ModelManifest) {
   };
 }
 
-function readProgress(data: Record<string, unknown>) {
-  const progress = data.progress;
-  return typeof progress === 'number' ? Math.min(100, Math.max(0, progress)) / 100 : 0;
-}
-
 export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
   readonly id = 'transformers-js/text-worker';
   private activeRequestId: string | null = null;
+  private artifactProgress: ArtifactProgressTracker | null = null;
   private currentManifest: ModelManifest | null = null;
   private deletePromise: {
     reject: (reason?: unknown) => void;
@@ -128,12 +125,14 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
     const queue = new AsyncEventQueue<RuntimeEvent>();
     this.downloadQueue = queue;
     this.currentManifest = manifest;
+    this.artifactProgress = new ArtifactProgressTracker(manifest);
     const abort = () => {
       queue.fail(new RuntimeError('ABORTED', 'Model download was aborted.', { recoverable: true }));
       this.downloadQueue = null;
       this.worker.terminate();
       this.session = null;
       this.currentManifest = null;
+      this.artifactProgress = null;
       this.worker = this.workerFactory();
       this.bindWorker();
     };
@@ -280,6 +279,7 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
   terminate() {
     this.worker.terminate();
     this.failPending(new RuntimeError('ABORTED', 'The runtime adapter was terminated.'));
+    this.artifactProgress = null;
     this.session = null;
     this.currentManifest = null;
   }
@@ -308,6 +308,7 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
   private failPending(error: RuntimeError) {
     this.downloadQueue?.fail(error);
     this.downloadQueue = null;
+    this.artifactProgress = null;
     this.cachePromise?.reject(error);
     this.cachePromise = null;
     this.deletePromise?.reject(error);
@@ -326,18 +327,22 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
 
   private handleMessage(message: TextModelWorkerEvent) {
     switch (message.type) {
-      case 'progress':
+      case 'progress': {
+        const progress = this.artifactProgress?.update(message.data);
         this.downloadQueue?.push({
+          ...progress,
           phase: 'download',
-          progress: readProgress(message.data),
+          progress: progress?.progress ?? 0,
           type: 'progress',
         });
         break;
+      }
       case 'ready': {
         if (this.downloadQueue) {
           this.downloadQueue.push({ phase: 'initialize', progress: 1, type: 'progress' });
           this.downloadQueue.end();
           this.downloadQueue = null;
+          this.artifactProgress = null;
         }
         if (this.loadPromise && this.session) {
           this.session = transitionRuntimeSession(this.session, 'ready');

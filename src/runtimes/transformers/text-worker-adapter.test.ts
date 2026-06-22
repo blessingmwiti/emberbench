@@ -130,6 +130,33 @@ describe('TransformersTextWorkerAdapter', () => {
     });
   });
 
+  it('reports weighted overall progress instead of per-file percentages', async () => {
+    const worker = new FakeWorker();
+    const adapter = new TransformersTextWorkerAdapter(() => worker);
+    const manifest = getTextManifest();
+    const graph = manifest.artifacts[0]!;
+    const events = collect(adapter.download(manifest));
+
+    worker.emit({
+      data: { file: graph.path, progress: 100 },
+      type: 'progress',
+    });
+    worker.emit({ loadTimeMs: 10, model: manifest.source.modelId, type: 'ready' });
+
+    await expect(events).resolves.toEqual([
+      expect.objectContaining({
+        artifact: graph.path,
+        artifactProgress: 1,
+        loadedBytes: graph.sizeBytes,
+        phase: 'download',
+        progress:
+          graph.sizeBytes / manifest.artifacts.reduce((sum, item) => sum + item.sizeBytes, 0),
+        type: 'progress',
+      }),
+      { phase: 'initialize', progress: 1, type: 'progress' },
+    ]);
+  });
+
   it('deletes the pinned pipeline cache through the worker', async () => {
     const worker = new FakeWorker();
     const adapter = new TransformersTextWorkerAdapter(() => worker);

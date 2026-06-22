@@ -86,4 +86,32 @@ describe('TransformersVisionWorkerAdapter', () => {
     worker.emit({ filesCached: 5, filesDeleted: 5, type: 'cache-deleted' });
     await expect(deletion).resolves.toEqual({ filesCached: 5, filesDeleted: 5 });
   });
+
+  it('combines vision artifact progress by byte size', async () => {
+    const worker = new FakeVisionWorker();
+    const adapter = new TransformersVisionWorkerAdapter(() => worker);
+    const model = manifest();
+    const encoder = model.artifacts[0]!;
+    const events = collect(adapter.download(model));
+
+    worker.emit({
+      data: { file: encoder.path, progress: 50 },
+      type: 'progress',
+    });
+    worker.emit({ loadTimeMs: 10, model: model.source.modelId, type: 'ready' });
+
+    const result = await events;
+    expect(result[0]).toMatchObject({
+      artifact: encoder.path,
+      artifactProgress: 0.5,
+      loadedBytes: Math.round(encoder.sizeBytes / 2),
+      phase: 'download',
+      type: 'progress',
+    });
+    expect(result[0]).toHaveProperty(
+      'progress',
+      Math.round(encoder.sizeBytes / 2) /
+        model.artifacts.reduce((sum, item) => sum + item.sizeBytes, 0),
+    );
+  });
 });

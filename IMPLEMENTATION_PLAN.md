@@ -367,7 +367,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 ### Download manager
 
 - [x] Implement queued downloads.
-- [ ] Implement per-file and overall progress.
+- [~] Implement per-file and overall progress.
 - [x] Implement cancellation.
 - [x] Implement retry with bounded backoff.
 - [ ] Implement resume where technically supported.
@@ -1110,4 +1110,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Add download cancellation and bounded retry handling.
 - [x] Persist understandable download state across page reloads.
 - [x] Add application routing for Home, Models, Downloads, and Settings.
+- [x] Weight runtime download progress across declared model artifacts.
 - [ ] Add retry and delete actions to the Downloads page.

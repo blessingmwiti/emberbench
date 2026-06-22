@@ -158,6 +158,8 @@ The inspector recommends a reduced-precision graph and includes matching externa
 
 An explicit runtime probe then downloaded the pinned SmolLM2 revision, initialized it through WebGPU in a disposable worker, released the model, and reported success in 46.38 seconds.
 
+Runtime download adapters now combine per-artifact progress using manifest byte sizes. A tiny graph file reaching 100% therefore no longer makes an external-data model appear fully downloaded; progress events expose the active artifact, its progress, loaded bytes, total bytes, and weighted overall progress.
+
 ## Open feasibility risks
 
 - WebGPU device loss during active inference

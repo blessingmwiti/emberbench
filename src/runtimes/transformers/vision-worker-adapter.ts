@@ -16,6 +16,7 @@ import type {
   RuntimeRunOptions,
   RuntimeSession,
 } from '../core/types';
+import { ArtifactProgressTracker } from './artifact-progress';
 
 interface VisionWorkerLike {
   addEventListener(type: 'error', listener: (event: Event) => void): void;
@@ -51,14 +52,10 @@ function workerConfig(manifest: ModelManifest) {
   };
 }
 
-function readProgress(data: Record<string, unknown>) {
-  const progress = data.progress;
-  return typeof progress === 'number' ? Math.min(100, Math.max(0, progress)) / 100 : 0;
-}
-
 export class TransformersVisionWorkerAdapter implements ModelRuntimeAdapter {
   readonly id = 'transformers-js/vision-worker';
   private activeRequestId: string | null = null;
+  private artifactProgress: ArtifactProgressTracker | null = null;
   private cachePromise: {
     reject: (reason?: unknown) => void;
     resolve: (status: RuntimeCacheStatus) => void;
@@ -156,11 +153,13 @@ export class TransformersVisionWorkerAdapter implements ModelRuntimeAdapter {
     const queue = new AsyncEventQueue<RuntimeEvent>();
     this.downloadQueue = queue;
     this.currentManifest = manifest;
+    this.artifactProgress = new ArtifactProgressTracker(manifest);
     const abort = () => {
       queue.fail(
         new RuntimeError('ABORTED', 'Vision model download was aborted.', { recoverable: true }),
       );
       this.downloadQueue = null;
+      this.artifactProgress = null;
       this.worker.terminate();
       this.worker = this.workerFactory();
       this.bindWorker();
@@ -279,6 +278,7 @@ export class TransformersVisionWorkerAdapter implements ModelRuntimeAdapter {
   terminate() {
     this.worker.terminate();
     this.failPending(new RuntimeError('ABORTED', 'The vision runtime adapter was terminated.'));
+    this.artifactProgress = null;
     this.session = null;
     this.currentManifest = null;
   }
@@ -311,6 +311,7 @@ export class TransformersVisionWorkerAdapter implements ModelRuntimeAdapter {
     this.deletePromise = null;
     this.downloadQueue?.fail(error);
     this.downloadQueue = null;
+    this.artifactProgress = null;
     this.loadPromise?.reject(error);
     this.loadPromise = null;
     this.runQueue?.fail(error);
@@ -325,18 +326,22 @@ export class TransformersVisionWorkerAdapter implements ModelRuntimeAdapter {
 
   private handleMessage(message: VisionWorkerEvent) {
     switch (message.type) {
-      case 'progress':
+      case 'progress': {
+        const progress = this.artifactProgress?.update(message.data);
         this.downloadQueue?.push({
+          ...progress,
           phase: 'download',
-          progress: readProgress(message.data),
+          progress: progress?.progress ?? 0,
           type: 'progress',
         });
         break;
+      }
       case 'ready':
         if (this.downloadQueue) {
           this.downloadQueue.push({ phase: 'initialize', progress: 1, type: 'progress' });
           this.downloadQueue.end();
           this.downloadQueue = null;
+          this.artifactProgress = null;
         }
         if (this.loadPromise && this.session) {
           this.session = transitionRuntimeSession(this.session, 'ready');
