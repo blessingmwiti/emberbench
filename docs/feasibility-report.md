@@ -180,6 +180,8 @@ Runtime discovery now selects WebGPU only when it is exposed in a secure context
 
 The local Runtime preference now supports Auto, Prefer WebGPU, and Force WebAssembly. A real forced-WASM SmolLM2 probe completed on June 22, 2026: 100.11 seconds cold load including the remaining download, 6/6 files verified, 2.54 seconds to first token, and 48.71 seconds for 64 generated tokens. A subsequent cached-files-only WASM load completed in 7.54 seconds with remote model requests blocked.
 
+Successful text and vision runs now write versioned local benchmark summaries containing only model, task, runtime device, timings, and output-unit counts. Prompts, generated text, captions, and images are excluded. The Models route shows the six most recent results, and full local-data reset clears them.
+
 ## Open feasibility risks
 
 - Real browser propagation of WebGPU device loss during active inference
@@ -192,4 +194,4 @@ The local Runtime preference now supports Auto, Prefer WebGPU, and Force WebAsse
 
 ## Next experiment
 
-Persist benchmark summaries for completed model runs.
+Persist workspace sessions and conversation history locally.

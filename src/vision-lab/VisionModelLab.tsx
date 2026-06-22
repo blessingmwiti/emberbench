@@ -12,6 +12,7 @@ import {
 import { TransformersVisionWorkerAdapter } from '../runtimes/transformers/vision-worker-adapter';
 import {
   appSettings,
+  benchmarks,
   INSTALLED_MODELS_CHANGED_EVENT,
   installedModels,
   SETTINGS_CHANGED_EVENT,
@@ -340,6 +341,20 @@ export function VisionModelLab() {
     }
     if (event.type === 'complete') {
       setDurationMs(event.durationMs);
+      void benchmarks
+        .put({
+          createdAt: new Date().toISOString(),
+          durationMs: event.durationMs,
+          firstTokenMs: null,
+          id: crypto.randomUUID(),
+          loadTimeMs,
+          modelId: visionModel.id,
+          outputUnits: 1,
+          runtimeDevice,
+          schemaVersion: 1,
+          task: 'image-to-text',
+        })
+        .catch(() => {});
     }
   }
 

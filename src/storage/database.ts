@@ -1,13 +1,16 @@
 import type { InstalledModel } from '../models/catalog/types';
 import { parseInstalledModel } from '../models/installed-model';
 import type { TransformersRuntimePreference } from '../runtimes/transformers/runtime-device';
+import type { TransformersRuntimeDevice } from '../runtimes/transformers/runtime-device';
 
 const DATABASE_NAME = 'emberbench';
-const DATABASE_VERSION = 2;
+const DATABASE_VERSION = 3;
+const BENCHMARKS_STORE = 'benchmarks';
 const INSTALLED_MODELS_STORE = 'installed-models';
 const SETTINGS_STORE = 'settings';
 export const INSTALLED_MODELS_CHANGED_EVENT = 'emberbench:installed-models-changed';
 export const SETTINGS_CHANGED_EVENT = 'emberbench:settings-changed';
+export const BENCHMARKS_CHANGED_EVENT = 'emberbench:benchmarks-changed';
 
 function announceInstalledModelsChanged() {
   if (typeof window !== 'undefined') {
@@ -18,6 +21,12 @@ function announceInstalledModelsChanged() {
 function announceSettingsChanged() {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT));
+  }
+}
+
+function announceBenchmarksChanged() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(BENCHMARKS_CHANGED_EVENT));
   }
 }
 
@@ -65,6 +74,13 @@ export function openEmberbenchDatabase(factory: IDBFactory = indexedDB): Promise
         database.createObjectStore(SETTINGS_STORE, {
           keyPath: 'id',
         });
+      }
+      if (!database.objectStoreNames.contains(BENCHMARKS_STORE)) {
+        const store = database.createObjectStore(BENCHMARKS_STORE, {
+          keyPath: 'id',
+        });
+        store.createIndex('createdAt', 'createdAt');
+        store.createIndex('modelId', 'modelId');
       }
     });
     request.addEventListener('success', () => resolve(request.result), { once: true });
@@ -231,17 +247,105 @@ export class SettingsRepository {
 
 export const appSettings = new SettingsRepository();
 
+export interface BenchmarkSummary {
+  createdAt: string;
+  durationMs: number;
+  firstTokenMs: number | null;
+  id: string;
+  loadTimeMs: number | null;
+  modelId: string;
+  outputUnits: number;
+  runtimeDevice: TransformersRuntimeDevice;
+  schemaVersion: 1;
+  task: 'image-to-text' | 'text-generation';
+}
+
+export function parseBenchmarkSummary(value: unknown): BenchmarkSummary | null {
+  if (!value || typeof value !== 'object') return null;
+  const benchmark = value as Partial<BenchmarkSummary>;
+  if (
+    benchmark.schemaVersion !== 1 ||
+    typeof benchmark.id !== 'string' ||
+    typeof benchmark.modelId !== 'string' ||
+    !['image-to-text', 'text-generation'].includes(benchmark.task ?? '') ||
+    !['wasm', 'webgpu'].includes(benchmark.runtimeDevice ?? '') ||
+    typeof benchmark.createdAt !== 'string' ||
+    Number.isNaN(Date.parse(benchmark.createdAt)) ||
+    typeof benchmark.durationMs !== 'number' ||
+    !Number.isFinite(benchmark.durationMs) ||
+    benchmark.durationMs < 0 ||
+    (benchmark.firstTokenMs !== null &&
+      (typeof benchmark.firstTokenMs !== 'number' ||
+        !Number.isFinite(benchmark.firstTokenMs) ||
+        benchmark.firstTokenMs < 0)) ||
+    (benchmark.loadTimeMs !== null &&
+      (typeof benchmark.loadTimeMs !== 'number' ||
+        !Number.isFinite(benchmark.loadTimeMs) ||
+        benchmark.loadTimeMs < 0)) ||
+    typeof benchmark.outputUnits !== 'number' ||
+    !Number.isInteger(benchmark.outputUnits) ||
+    benchmark.outputUnits < 0
+  ) {
+    return null;
+  }
+  return benchmark as BenchmarkSummary;
+}
+
+export class BenchmarkRepository {
+  constructor(private readonly factory?: IDBFactory) {}
+
+  async list(limit = 10): Promise<BenchmarkSummary[]> {
+    const database = await openEmberbenchDatabase(this.factory);
+    try {
+      const transaction = database.transaction(BENCHMARKS_STORE, 'readonly');
+      const values = await requestResult(
+        transaction.objectStore(BENCHMARKS_STORE).getAll() as IDBRequest<unknown[]>,
+      );
+      return values
+        .map(parseBenchmarkSummary)
+        .filter((value): value is BenchmarkSummary => value !== null)
+        .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+        .slice(0, limit);
+    } finally {
+      database.close();
+    }
+  }
+
+  async put(benchmark: BenchmarkSummary): Promise<void> {
+    if (!parseBenchmarkSummary(benchmark)) {
+      throw new Error('Refusing to persist an invalid benchmark summary.');
+    }
+    const database = await openEmberbenchDatabase(this.factory);
+    try {
+      const transaction = database.transaction(BENCHMARKS_STORE, 'readwrite');
+      const completed = transactionCompleted(transaction);
+      await requestResult(transaction.objectStore(BENCHMARKS_STORE).put(benchmark));
+      await completed;
+      announceBenchmarksChanged();
+    } finally {
+      database.close();
+    }
+  }
+}
+
+export const benchmarks = new BenchmarkRepository();
+
 export async function clearEmberbenchDatabase(factory: IDBFactory = indexedDB): Promise<void> {
   const database = await openEmberbenchDatabase(factory);
   try {
-    const transaction = database.transaction([INSTALLED_MODELS_STORE, SETTINGS_STORE], 'readwrite');
+    const transaction = database.transaction(
+      [BENCHMARKS_STORE, INSTALLED_MODELS_STORE, SETTINGS_STORE],
+      'readwrite',
+    );
     const completed = transactionCompleted(transaction);
     transaction.objectStore(INSTALLED_MODELS_STORE).clear();
     transaction.objectStore(SETTINGS_STORE).clear();
+    transaction.objectStore(BENCHMARKS_STORE).clear();
     await completed;
   } finally {
     database.close();
   }
   announceInstalledModelsChanged();
   announceSettingsChanged();
+  announceBenchmarksChanged();
 }

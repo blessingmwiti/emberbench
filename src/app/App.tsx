@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { RecentBenchmarks } from '../benchmarks/RecentBenchmarks';
 import { formatBytes } from '../diagnostics/format';
 import {
   requestPersistentStorage,
@@ -358,6 +359,8 @@ export function App() {
             <VisionModelLab />
 
             <ModelImporter />
+
+            <RecentBenchmarks />
           </>
         ) : null}
 

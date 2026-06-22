@@ -70,8 +70,8 @@ export function SettingsPanel() {
         </div>
         <p>
           Emberbench stores these preferences in this browser. Reset removes cached model files,
-          installation records, and settings; it keeps the offline app shell so Emberbench can still
-          open.
+          installation records, benchmark summaries, and settings; it keeps the offline app shell so
+          Emberbench can still open.
         </p>
       </div>
 
@@ -135,7 +135,10 @@ export function SettingsPanel() {
           <p>This cannot be undone. Downloaded models will need to be installed again.</p>
           {confirmReset ? (
             <div className="settings-reset-confirmation" role="alert">
-              <p>Remove all cached model files, install records, and saved settings now?</p>
+              <p>
+                Remove all cached model files, install records, benchmark summaries, and saved
+                settings now?
+              </p>
               <div>
                 <button
                   className="button button--danger"

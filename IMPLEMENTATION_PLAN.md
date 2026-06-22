@@ -347,7 +347,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [x] Store model installation metadata.
 - [x] Store application settings.
 - [ ] Store conversations and workspace sessions.
-- [ ] Store benchmark summaries.
+- [x] Store benchmark summaries.
 - [x] Implement transactional writes where state must remain consistent.
 - [x] Handle corrupted or incompatible persisted data.
 - [x] Add a full local-data reset flow.
@@ -1122,4 +1122,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Add direct worker-protocol tests for text and vision workers.
 - [x] Implement runtime discovery and practical WebAssembly fallback rules.
 - [x] Add a force-WebAssembly preference and run a real fallback inference probe.
-- [ ] Persist benchmark summaries for completed model runs.
+- [x] Persist benchmark summaries for completed model runs.
+- [ ] Persist workspace sessions and conversation history locally.

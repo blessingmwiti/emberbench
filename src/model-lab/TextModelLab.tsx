@@ -5,6 +5,7 @@ import { findCuratedModel } from '../models/catalog/registry';
 import type { InstalledModel } from '../models/catalog/types';
 import {
   appSettings,
+  benchmarks,
   INSTALLED_MODELS_CHANGED_EVENT,
   installedModels,
   SETTINGS_CHANGED_EVENT,
@@ -291,6 +292,20 @@ export function TextModelLab() {
         firstTokenMs: event.firstTokenMs ?? null,
         tokenCount: event.tokenCount ?? 0,
       });
+      void benchmarks
+        .put({
+          createdAt: new Date().toISOString(),
+          durationMs: event.durationMs,
+          firstTokenMs: event.firstTokenMs ?? null,
+          id: crypto.randomUUID(),
+          loadTimeMs,
+          modelId: textModel.id,
+          outputUnits: event.tokenCount ?? 0,
+          runtimeDevice,
+          schemaVersion: 1,
+          task: 'text-generation',
+        })
+        .catch(() => {});
     }
   }
 
