@@ -11,12 +11,25 @@ describe('application settings schema', () => {
     expect(parseAppSettings({ ...DEFAULT_APP_SETTINGS, schemaVersion: 2 })).toBeNull();
     expect(parseAppSettings({ ...DEFAULT_APP_SETTINGS, defaultCachedFilesOnly: 'yes' })).toBeNull();
     expect(parseAppSettings({ ...DEFAULT_APP_SETTINGS, runtimePreference: 'gpu' })).toBeNull();
+    expect(
+      parseAppSettings({
+        ...DEFAULT_APP_SETTINGS,
+        assistantGeneration: {
+          ...DEFAULT_APP_SETTINGS.assistantGeneration,
+          maxNewTokens: 0,
+        },
+      }),
+    ).toBeNull();
   });
 
-  it('migrates settings saved before runtime preference existed', () => {
+  it('migrates settings saved before newer preferences existed', () => {
     const legacy: Partial<typeof DEFAULT_APP_SETTINGS> = { ...DEFAULT_APP_SETTINGS };
     delete legacy.runtimePreference;
+    delete legacy.assistantGeneration;
     expect(parseAppSettings(legacy)?.runtimePreference).toBe('auto');
+    expect(parseAppSettings(legacy)?.assistantGeneration).toEqual(
+      DEFAULT_APP_SETTINGS.assistantGeneration,
+    );
   });
 });
 

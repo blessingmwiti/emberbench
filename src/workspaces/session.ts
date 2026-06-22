@@ -105,3 +105,60 @@ export function appendWorkspaceMessage(
     updatedAt: createdAt,
   };
 }
+
+export function renameWorkspaceSession(
+  session: WorkspaceSession,
+  title: string,
+  now = new Date(),
+): WorkspaceSession {
+  const normalized = title.trim();
+  if (!normalized) throw new Error('Workspace session titles cannot be empty.');
+  return {
+    ...session,
+    title: normalized.slice(0, 80),
+    updatedAt: now.toISOString(),
+  };
+}
+
+export function removeLastAssistantMessage(
+  session: WorkspaceSession,
+  now = new Date(),
+): WorkspaceSession {
+  const messages = [...session.messages];
+  if (messages.at(-1)?.role !== 'assistant') {
+    throw new Error('There is no assistant response to regenerate.');
+  }
+  messages.pop();
+  return {
+    ...session,
+    messages,
+    updatedAt: now.toISOString(),
+  };
+}
+
+export function reviseWorkspaceUserMessage(
+  session: WorkspaceSession,
+  messageId: string,
+  content: string,
+  now = new Date(),
+): WorkspaceSession {
+  const normalized = content.trim();
+  if (!normalized) throw new Error('Workspace messages cannot be empty.');
+  const messageIndex = session.messages.findIndex((message) => message.id === messageId);
+  const message = session.messages[messageIndex];
+  if (!message || message.role !== 'user') {
+    throw new Error('Only an existing user message can be revised.');
+  }
+
+  return {
+    ...session,
+    messages: [
+      ...session.messages.slice(0, messageIndex),
+      {
+        ...message,
+        content: normalized,
+      },
+    ],
+    updatedAt: now.toISOString(),
+  };
+}

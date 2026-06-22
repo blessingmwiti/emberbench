@@ -6,11 +6,22 @@ import { TransformersTextWorkerAdapter } from '../runtimes/transformers/text-wor
 import { resolveTransformersRuntimeDevice } from '../runtimes/transformers/runtime-device';
 import {
   appSettings,
+  DEFAULT_ASSISTANT_GENERATION_SETTINGS,
   WORKSPACE_SESSIONS_CHANGED_EVENT,
   workspaceSessions,
+  type AssistantGenerationSettings,
 } from '../storage/database';
 import { installModel } from '../storage/install-model';
-import { appendWorkspaceMessage, createWorkspaceSession, type WorkspaceSession } from './session';
+import {
+  appendWorkspaceMessage,
+  createWorkspaceSession,
+  removeLastAssistantMessage,
+  renameWorkspaceSession,
+  reviseWorkspaceUserMessage,
+  type WorkspaceSession,
+} from './session';
+import { copyText } from './clipboard';
+import { MarkdownContent } from './MarkdownContent';
 
 const curatedAssistantModel = findCuratedModel('smollm2-135m-q4');
 if (!curatedAssistantModel) throw new Error('The General Assistant model is missing.');
@@ -27,12 +38,21 @@ function conversationPrompt(session: WorkspaceSession) {
 export function AssistantWorkspace() {
   const adapterRef = useRef<TransformersTextWorkerAdapter | null>(null);
   const requestRef = useRef<string | null>(null);
+  const settingsWriteRef = useRef(Promise.resolve());
   const [sessions, setSessions] = useState<WorkspaceSession[]>([]);
   const [session, setSession] = useState<WorkspaceSession | null>(null);
   const [draft, setDraft] = useState('');
   const [streamingText, setStreamingText] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'running' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [renameId, setRenameId] = useState<string | null>(null);
+  const [renameTitle, setRenameTitle] = useState('');
+  const [editMessageId, setEditMessageId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [generationSettings, setGenerationSettings] = useState<AssistantGenerationSettings>(
+    DEFAULT_ASSISTANT_GENERATION_SETTINGS,
+  );
 
   useEffect(() => {
     let active = true;
@@ -63,6 +83,10 @@ export function AssistantWorkspace() {
     };
   }, []);
 
+  useEffect(() => {
+    void appSettings.get().then((settings) => setGenerationSettings(settings.assistantGeneration));
+  }, []);
+
   async function ensureReady() {
     if (adapterRef.current?.session?.state === 'ready') return adapterRef.current;
     setStatus('loading');
@@ -80,18 +104,10 @@ export function AssistantWorkspace() {
     return adapter;
   }
 
-  async function sendMessage() {
-    const content = draft.trim();
-    if (!content || status === 'running' || status === 'loading') return;
-    setDraft('');
+  async function generateReply(activeSession: WorkspaceSession) {
     setError(null);
+    setNotice(null);
     setStreamingText('');
-
-    let activeSession =
-      session ?? createWorkspaceSession('assistant', 'Untitled session', assistantModel.id);
-    activeSession = appendWorkspaceMessage(activeSession, 'user', content);
-    await workspaceSessions.put(activeSession);
-    setSession(activeSession);
 
     try {
       const adapter = await ensureReady();
@@ -101,7 +117,12 @@ export function AssistantWorkspace() {
       let reply = '';
       for await (const event of adapter.run(
         { kind: 'text', text: conversationPrompt(activeSession) },
-        { maxNewTokens: 128, requestId },
+        {
+          maxNewTokens: generationSettings.maxNewTokens,
+          requestId,
+          temperature: generationSettings.temperature,
+          topP: generationSettings.topP,
+        },
       )) {
         if (requestRef.current !== requestId) continue;
         if (event.type === 'token') {
@@ -130,6 +151,84 @@ export function AssistantWorkspace() {
       );
       setStatus('error');
     }
+  }
+
+  async function sendMessage() {
+    const content = draft.trim();
+    if (!content || status === 'running' || status === 'loading') return;
+    setDraft('');
+
+    let activeSession =
+      session ?? createWorkspaceSession('assistant', 'Untitled session', assistantModel.id);
+    activeSession = appendWorkspaceMessage(activeSession, 'user', content);
+    await workspaceSessions.put(activeSession);
+    setSession(activeSession);
+    await generateReply(activeSession);
+  }
+
+  async function regenerateReply() {
+    if (!session || status === 'running' || status === 'loading') return;
+    try {
+      const retrySession = removeLastAssistantMessage(session);
+      await workspaceSessions.put(retrySession);
+      setSession(retrySession);
+      await generateReply(retrySession);
+    } catch (retryError) {
+      setError(
+        retryError instanceof Error ? retryError.message : 'The response cannot be retried.',
+      );
+    }
+  }
+
+  async function saveRename(item: WorkspaceSession) {
+    try {
+      const renamed = renameWorkspaceSession(item, renameTitle);
+      await workspaceSessions.put(renamed);
+      setSession((current) => (current?.id === renamed.id ? renamed : current));
+      setRenameId(null);
+      setRenameTitle('');
+    } catch (renameError) {
+      setError(renameError instanceof Error ? renameError.message : 'Conversation rename failed.');
+    }
+  }
+
+  async function saveMessageRevision() {
+    if (!session || !editMessageId || busy) return;
+    try {
+      const revised = reviseWorkspaceUserMessage(session, editMessageId, editContent);
+      await workspaceSessions.put(revised);
+      setSession(revised);
+      setEditMessageId(null);
+      setEditContent('');
+      await generateReply(revised);
+    } catch (revisionError) {
+      setError(
+        revisionError instanceof Error
+          ? revisionError.message
+          : 'The message could not be revised.',
+      );
+    }
+  }
+
+  async function copyMessage(content: string) {
+    try {
+      await copyText(content);
+      setNotice('Message copied.');
+    } catch {
+      setNotice('This browser did not allow clipboard access.');
+    }
+  }
+
+  function saveGenerationSettings(next: AssistantGenerationSettings) {
+    setGenerationSettings(next);
+    settingsWriteRef.current = settingsWriteRef.current
+      .then(async () => {
+        const settings = await appSettings.get();
+        await appSettings.put({ ...settings, assistantGeneration: next });
+      })
+      .catch(() => {
+        setError('Generation settings could not be saved locally.');
+      });
   }
 
   async function stopReply() {
@@ -177,17 +276,46 @@ export function AssistantWorkspace() {
           <div className="assistant-session-list">
             {sessions.map((item) => (
               <div className={session?.id === item.id ? 'is-active' : ''} key={item.id}>
-                <button onClick={() => setSession(item)} type="button">
-                  <strong>{item.title}</strong>
-                  <span>{new Date(item.updatedAt).toLocaleString()}</span>
-                </button>
-                <button
-                  aria-label={`Delete ${item.title}`}
-                  onClick={() => void deleteSession(item)}
-                  type="button"
-                >
-                  ×
-                </button>
+                {renameId === item.id ? (
+                  <form
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void saveRename(item);
+                    }}
+                  >
+                    <input
+                      aria-label="Conversation title"
+                      autoFocus
+                      onChange={(event) => setRenameTitle(event.target.value)}
+                      value={renameTitle}
+                    />
+                    <button type="submit">Save</button>
+                  </form>
+                ) : (
+                  <button onClick={() => setSession(item)} type="button">
+                    <strong>{item.title}</strong>
+                    <span>{new Date(item.updatedAt).toLocaleString()}</span>
+                  </button>
+                )}
+                <div>
+                  <button
+                    aria-label={`Rename ${item.title}`}
+                    onClick={() => {
+                      setRenameId(item.id);
+                      setRenameTitle(item.title);
+                    }}
+                    type="button"
+                  >
+                    ✎
+                  </button>
+                  <button
+                    aria-label={`Delete ${item.title}`}
+                    onClick={() => void deleteSession(item)}
+                    type="button"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -196,13 +324,75 @@ export function AssistantWorkspace() {
         <div className="assistant-chat">
           <div className="assistant-messages" aria-live="polite">
             {session?.messages.length ? (
-              session.messages.map((message) => (
+              session.messages.map((message, messageIndex) => (
                 <article
                   className={`assistant-message assistant-message--${message.role}`}
                   key={message.id}
                 >
                   <span>{message.role === 'user' ? 'You' : 'Assistant'}</span>
-                  <p>{message.content}</p>
+                  {editMessageId === message.id ? (
+                    <form
+                      className="assistant-message__editor"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        void saveMessageRevision();
+                      }}
+                    >
+                      <label htmlFor={`edit-${message.id}`}>Edit message</label>
+                      <textarea
+                        autoFocus
+                        id={`edit-${message.id}`}
+                        onChange={(event) => setEditContent(event.target.value)}
+                        rows={6}
+                        value={editContent}
+                      />
+                      {messageIndex < session.messages.length - 1 ? (
+                        <p>Saving removes the later messages and regenerates from this point.</p>
+                      ) : null}
+                      <div>
+                        <button
+                          className="button button--primary"
+                          disabled={!editContent.trim() || busy}
+                          type="submit"
+                        >
+                          Save and regenerate
+                        </button>
+                        <button
+                          className="button"
+                          onClick={() => {
+                            setEditMessageId(null);
+                            setEditContent('');
+                          }}
+                          type="button"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <>
+                      <div className="assistant-message__content">
+                        <MarkdownContent content={message.content} />
+                      </div>
+                      <div className="assistant-message__actions">
+                        <button onClick={() => void copyMessage(message.content)} type="button">
+                          Copy
+                        </button>
+                        {message.role === 'user' ? (
+                          <button
+                            disabled={busy}
+                            onClick={() => {
+                              setEditMessageId(message.id);
+                              setEditContent(message.content);
+                            }}
+                            type="button"
+                          >
+                            Edit
+                          </button>
+                        ) : null}
+                      </div>
+                    </>
+                  )}
                 </article>
               ))
             ) : (
@@ -214,12 +404,24 @@ export function AssistantWorkspace() {
             {streamingText ? (
               <article className="assistant-message assistant-message--assistant">
                 <span>Assistant</span>
-                <p>{streamingText}</p>
+                <div className="assistant-message__content">
+                  <MarkdownContent content={streamingText} />
+                </div>
               </article>
             ) : null}
           </div>
 
           <div className="assistant-composer">
+            {session?.messages.at(-1)?.role === 'assistant' ? (
+              <button
+                className="assistant-regenerate"
+                disabled={busy}
+                onClick={() => void regenerateReply()}
+                type="button"
+              >
+                Regenerate last response
+              </button>
+            ) : null}
             <label htmlFor="assistant-draft">Message</label>
             <textarea
               disabled={busy}
@@ -256,10 +458,78 @@ export function AssistantWorkspace() {
               )}
               <span>{status === 'error' ? 'Needs attention' : status}</span>
             </div>
+            <details className="assistant-generation-settings">
+              <summary>Advanced generation</summary>
+              <div>
+                <label htmlFor="assistant-max-tokens">
+                  Maximum output tokens
+                  <select
+                    disabled={busy}
+                    id="assistant-max-tokens"
+                    onChange={(event) =>
+                      saveGenerationSettings({
+                        ...generationSettings,
+                        maxNewTokens: Number(event.target.value),
+                      })
+                    }
+                    value={generationSettings.maxNewTokens}
+                  >
+                    <option value="64">64</option>
+                    <option value="128">128</option>
+                    <option value="256">256</option>
+                    <option value="512">512</option>
+                  </select>
+                </label>
+                <label htmlFor="assistant-temperature">
+                  Temperature
+                  <select
+                    disabled={busy}
+                    id="assistant-temperature"
+                    onChange={(event) =>
+                      saveGenerationSettings({
+                        ...generationSettings,
+                        temperature: Number(event.target.value),
+                      })
+                    }
+                    value={generationSettings.temperature}
+                  >
+                    <option value="0">Deterministic · 0.0</option>
+                    <option value="0.4">Balanced · 0.4</option>
+                    <option value="0.8">Creative · 0.8</option>
+                    <option value="1.2">Exploratory · 1.2</option>
+                  </select>
+                </label>
+                <label htmlFor="assistant-top-p">
+                  Top P
+                  <select
+                    disabled={busy}
+                    id="assistant-top-p"
+                    onChange={(event) =>
+                      saveGenerationSettings({
+                        ...generationSettings,
+                        topP: Number(event.target.value),
+                      })
+                    }
+                    value={generationSettings.topP}
+                  >
+                    <option value="1">Open · 1.00</option>
+                    <option value="0.95">Focused · 0.95</option>
+                    <option value="0.9">Tighter · 0.90</option>
+                    <option value="0.8">Narrow · 0.80</option>
+                  </select>
+                </label>
+              </div>
+              <p>Temperature 0 is deterministic. Higher values increase variation.</p>
+            </details>
           </div>
           {error ? (
             <p className="assistant-error" role="alert">
               {error} <a href="#/models">Open Models</a>
+            </p>
+          ) : null}
+          {notice ? (
+            <p className="assistant-notice" role="status">
+              {notice}
             </p>
           ) : null}
         </div>

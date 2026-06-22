@@ -475,18 +475,18 @@ The goal of this phase is to eliminate the largest technical risks before invest
 ### General Assistant workspace
 
 - [x] Build conversation layout.
-- [~] Create and rename conversations.
+- [x] Create and rename conversations.
 - [x] Compose and submit prompts.
 - [x] Render streaming output.
 - [x] Stop generation.
-- [ ] Regenerate a response.
-- [ ] Copy message content.
-- [ ] Edit and resubmit a prior user message.
-- [ ] Render Markdown safely.
-- [ ] Render code blocks safely.
+- [x] Regenerate a response.
+- [x] Copy message content.
+- [x] Edit and resubmit a prior user message.
+- [x] Render Markdown safely.
+- [x] Render code blocks safely.
 - [x] Persist conversations locally.
 - [x] Delete individual conversations.
-- [ ] Expose generation settings behind an advanced panel.
+- [x] Expose generation settings behind an advanced panel.
 - [ ] Display the active model and local-processing status.
 
 ### Code Lab workspace
@@ -1125,4 +1125,8 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Persist benchmark summaries for completed model runs.
 - [x] Persist workspace sessions and conversation history locally.
 - [x] Build the General Assistant workspace on the session repository.
-- [ ] Add conversation rename, copy, regenerate, and safe Markdown rendering.
+- [x] Add conversation rename, copy, and regenerate controls.
+- [x] Add safe Markdown and code-block rendering to General Assistant.
+- [x] Add edit-and-resubmit support for prior user messages.
+- [x] Expose General Assistant generation settings in an advanced panel.
+- [ ] Display the active General Assistant model and local-processing status.

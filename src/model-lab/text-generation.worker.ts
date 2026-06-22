@@ -178,11 +178,13 @@ async function generate(request: Extract<TextModelWorkerRequest, { type: 'genera
     });
 
     await activeGenerator(request.prompt, {
-      do_sample: false,
+      do_sample: request.temperature > 0,
       max_new_tokens: request.maxNewTokens,
       return_full_text: false,
       stopping_criteria: stoppingCriteria,
       streamer,
+      temperature: request.temperature > 0 ? request.temperature : undefined,
+      top_p: request.topP,
     });
 
     if (cancellationRequested) {

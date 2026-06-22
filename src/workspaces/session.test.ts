@@ -1,12 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { appendWorkspaceMessage, createWorkspaceSession, parseWorkspaceSession } from './session';
+import {
+  appendWorkspaceMessage,
+  createWorkspaceSession,
+  parseWorkspaceSession,
+  removeLastAssistantMessage,
+  renameWorkspaceSession,
+  reviseWorkspaceUserMessage,
+} from './session';
 
 describe('workspace sessions', () => {
   beforeEach(() => {
-    vi.spyOn(crypto, 'randomUUID')
-      .mockReturnValueOnce('00000000-0000-4000-8000-000000000001')
-      .mockReturnValueOnce('00000000-0000-4000-8000-000000000002');
+    vi.spyOn(crypto, 'randomUUID').mockReturnValue('00000000-0000-4000-8000-000000000001');
   });
 
   afterEach(() => {
@@ -45,5 +50,44 @@ describe('workspace sessions', () => {
         messages: [{ content: '', createdAt: session.createdAt, id: 'bad', role: 'user' }],
       }),
     ).toBeNull();
+  });
+
+  it('renames sessions and removes only the latest assistant response', () => {
+    let session = createWorkspaceSession('assistant');
+    session = appendWorkspaceMessage(session, 'user', 'Question');
+    session = appendWorkspaceMessage(session, 'assistant', 'First answer');
+    session = renameWorkspaceSession(session, '  Research notes  ');
+    expect(session.title).toBe('Research notes');
+
+    const retry = removeLastAssistantMessage(session);
+    expect(retry.messages).toHaveLength(1);
+    expect(retry.messages[0]?.role).toBe('user');
+    expect(() => removeLastAssistantMessage(retry)).toThrow('no assistant response');
+  });
+
+  it('revises a user turn and removes the later conversation branch', () => {
+    let session = createWorkspaceSession('assistant');
+    session = appendWorkspaceMessage(session, 'user', 'Original question');
+    const firstMessageId = session.messages[0]?.id;
+    session = appendWorkspaceMessage(session, 'assistant', 'Original answer');
+    session = appendWorkspaceMessage(session, 'user', 'Follow-up');
+
+    const revised = reviseWorkspaceUserMessage(
+      session,
+      firstMessageId ?? '',
+      '  Revised question  ',
+      new Date('2026-06-22T08:00:00.000Z'),
+    );
+
+    expect(revised.messages).toHaveLength(1);
+    expect(revised.messages[0]).toMatchObject({
+      content: 'Revised question',
+      id: firstMessageId,
+      role: 'user',
+    });
+    expect(revised.updatedAt).toBe('2026-06-22T08:00:00.000Z');
+    expect(() => reviseWorkspaceUserMessage(session, 'missing', 'Nope')).toThrow(
+      'existing user message',
+    );
   });
 });

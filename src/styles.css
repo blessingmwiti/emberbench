@@ -55,7 +55,7 @@ a:focus-visible {
 
 .app-shell {
   min-height: 100vh;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 .site-header {
@@ -565,7 +565,7 @@ h2 {
 
 .assistant-session-list > div {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   border: 1px solid transparent;
   border-radius: 4px;
 }
@@ -576,12 +576,35 @@ h2 {
 }
 
 .assistant-session-list button {
+  min-width: 0;
   padding: 10px;
   border: 0;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
   text-align: left;
+}
+
+.assistant-session-list form {
+  padding: 7px;
+  display: flex;
+  gap: 5px;
+}
+
+.assistant-session-list input {
+  min-width: 0;
+  padding: 6px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--cream);
+}
+
+.assistant-session-list > div > div {
+  display: flex;
+}
+
+.assistant-session-list > div > div button {
+  padding-inline: 7px;
 }
 
 .assistant-session-list strong,
@@ -648,15 +671,160 @@ h2 {
   text-transform: uppercase;
 }
 
-.assistant-message p {
+.assistant-message__content {
   margin: 7px 0 0;
   line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.assistant-message__content > :first-child {
+  margin-top: 0;
+}
+
+.assistant-message__content > :last-child {
+  margin-bottom: 0;
+}
+
+.assistant-message__content p {
   white-space: pre-wrap;
+}
+
+.assistant-message__content h2,
+.assistant-message__content h3,
+.assistant-message__content h4 {
+  margin: 18px 0 8px;
+  letter-spacing: -0.02em;
+}
+
+.assistant-message__content h2 {
+  font-size: 20px;
+}
+
+.assistant-message__content h3 {
+  font-size: 17px;
+}
+
+.assistant-message__content h4 {
+  font-size: 15px;
+}
+
+.assistant-message__content ul,
+.assistant-message__content ol {
+  padding-left: 22px;
+}
+
+.assistant-message__content blockquote {
+  margin: 14px 0;
+  padding-left: 14px;
+  border-left: 2px solid var(--ember);
+  color: var(--muted);
+}
+
+.assistant-message__content code {
+  padding: 2px 5px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: #110d0b;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 0.88em;
+}
+
+.assistant-message__content pre {
+  max-width: 100%;
+  margin: 14px 0;
+  padding: 14px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #110d0b;
+}
+
+.assistant-message__content pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  white-space: pre;
+}
+
+.assistant-message__content a {
+  color: var(--ember-light);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.assistant-message__actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.assistant-message__actions button {
+  margin-top: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.assistant-message__actions button:hover {
+  color: var(--cream);
+}
+
+.assistant-message__editor {
+  margin-top: 10px;
+}
+
+.assistant-message__editor label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.assistant-message__editor textarea {
+  width: 100%;
+  padding: 12px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  outline: none;
+  background: #110d0b;
+  color: var(--cream);
+  font: inherit;
+  line-height: 1.55;
+}
+
+.assistant-message__editor textarea:focus {
+  border-color: var(--ember);
+}
+
+.assistant-message__editor > p {
+  margin: 8px 0;
+  color: var(--gold);
+  font-size: 10px;
+}
+
+.assistant-message__editor > div {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .assistant-composer {
   padding: 20px;
   border-top: 1px solid var(--line);
+}
+
+.assistant-regenerate {
+  margin-bottom: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ember-light);
+  cursor: pointer;
+  font-size: 11px;
 }
 
 .assistant-composer label {
@@ -698,11 +866,60 @@ h2 {
   text-transform: uppercase;
 }
 
+.assistant-generation-settings {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.assistant-generation-settings summary {
+  width: fit-content;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.assistant-generation-settings > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.assistant-generation-settings label {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.assistant-generation-settings input,
+.assistant-generation-settings select {
+  width: 100%;
+  margin-top: 6px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: #110d0b;
+  color: var(--cream);
+}
+
+.assistant-generation-settings > p {
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+}
+
 .assistant-error {
   margin: 0;
   padding: 12px 20px;
   border-top: 1px solid #743c30;
   color: var(--ember-light);
+}
+
+.assistant-notice {
+  margin: 0;
+  padding: 10px 20px;
+  border-top: 1px solid var(--line);
+  color: var(--green);
 }
 
 .assistant-error a {
