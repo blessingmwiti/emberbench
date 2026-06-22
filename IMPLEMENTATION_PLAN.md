@@ -283,7 +283,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [ ] Implement runtime-session state.
 - [ ] Implement download state.
 - [ ] Implement settings state.
-- [ ] Implement conversation/workspace-session state.
+- [x] Implement conversation/workspace-session state.
 - [ ] Ensure worker messages are serializable and versioned.
 
 ### Exit criteria
@@ -461,31 +461,31 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Model library
 
-- [ ] Display curated model cards.
+- [x] Display curated model cards.
 - [ ] Filter by capability.
-- [ ] Filter by installed status.
+- [x] Filter by installed status.
 - [ ] Filter by device compatibility.
-- [ ] Show precision and artifact size.
-- [ ] Show source, pinned revision, and license.
+- [x] Show precision and artifact size.
+- [x] Show source, pinned revision, and license.
 - [ ] Show supported workspaces.
 - [x] Show installed/offline status.
-- [ ] Add install, load, unload, and delete actions.
+- [x] Add install, load, unload, and delete actions.
 - [ ] Add model detail pages.
 
 ### General Assistant workspace
 
-- [ ] Build conversation layout.
-- [ ] Create and rename conversations.
-- [ ] Compose and submit prompts.
-- [ ] Render streaming output.
-- [ ] Stop generation.
+- [x] Build conversation layout.
+- [~] Create and rename conversations.
+- [x] Compose and submit prompts.
+- [x] Render streaming output.
+- [x] Stop generation.
 - [ ] Regenerate a response.
 - [ ] Copy message content.
 - [ ] Edit and resubmit a prior user message.
 - [ ] Render Markdown safely.
 - [ ] Render code blocks safely.
-- [ ] Persist conversations locally.
-- [ ] Delete individual conversations.
+- [x] Persist conversations locally.
+- [x] Delete individual conversations.
 - [ ] Expose generation settings behind an advanced panel.
 - [ ] Display the active model and local-processing status.
 
@@ -1124,4 +1124,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Add a force-WebAssembly preference and run a real fallback inference probe.
 - [x] Persist benchmark summaries for completed model runs.
 - [x] Persist workspace sessions and conversation history locally.
-- [ ] Build the General Assistant workspace on the session repository.
+- [x] Build the General Assistant workspace on the session repository.
+- [ ] Add conversation rename, copy, regenerate, and safe Markdown rendering.

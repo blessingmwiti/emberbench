@@ -184,6 +184,8 @@ Successful text and vision runs now write versioned local benchmark summaries co
 
 Workspace sessions now have a versioned local schema and IndexedDB repository with validated user/assistant messages, first-message titles, chronological listing, updates, deletion, and full-reset coverage. This is the persistence foundation for task-focused workspaces; no account or sync service is involved.
 
+General Assistant now runs end to end from the Home workspace launcher. It loads only verified cached model files, streams local replies, supports stopping generation, creates first-message titles, lists/selects/deletes sessions, and restores conversation history after a direct `#/assistant` reload. A live SmolLM2 conversation verified the full path; response quality remains constrained by the intentionally tiny development model.
+
 ## Open feasibility risks
 
 - Real browser propagation of WebGPU device loss during active inference
@@ -196,4 +198,4 @@ Workspace sessions now have a versioned local schema and IndexedDB repository wi
 
 ## Next experiment
 
-Build the General Assistant workspace on the session repository.
+Add conversation rename, copy, regenerate, and safe Markdown rendering.

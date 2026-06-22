@@ -16,6 +16,7 @@ import { PwaStatus } from '../pwa/PwaStatus';
 import { SettingsPanel } from '../settings/SettingsPanel';
 import { reconcileInstallations } from '../storage/reconcile-installations';
 import { VisionModelLab } from '../vision-lab/VisionModelLab';
+import { AssistantWorkspace } from '../workspaces/AssistantWorkspace';
 import { routeHref, useAppRoute, type AppRoute } from './routing';
 
 const workspaces = [
@@ -23,16 +24,19 @@ const workspaces = [
     name: 'General Assistant',
     description: 'Private conversation, summarization, planning, and writing.',
     icon: '✦',
+    route: 'assistant' as const,
   },
   {
     name: 'Code Lab',
     description: 'Explain, generate, refactor, debug, and review source code.',
     icon: '⌘',
+    route: null,
   },
   {
     name: 'Vision Desk',
     description: 'Understand images, extract text, and answer visual questions.',
     icon: '◉',
+    route: null,
   },
 ];
 
@@ -200,7 +204,13 @@ export function App() {
                     </div>
                     <h3>{workspace.name}</h3>
                     <p>{workspace.description}</p>
-                    <span className="coming-soon">Planned for MVP</span>
+                    {workspace.route ? (
+                      <a className="workspace-open" href={routeHref(workspace.route)}>
+                        Open workspace →
+                      </a>
+                    ) : (
+                      <span className="coming-soon">Planned for MVP</span>
+                    )}
                   </article>
                 ))}
               </div>
@@ -367,6 +377,8 @@ export function App() {
         {route === 'downloads' ? <DownloadCenter /> : null}
 
         {route === 'settings' ? <SettingsPanel /> : null}
+
+        {route === 'assistant' ? <AssistantWorkspace /> : null}
 
         {route === 'home' ? (
           <section className="section roadmap-section" id="roadmap">
