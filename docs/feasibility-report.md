@@ -170,4 +170,4 @@ An explicit runtime probe then downloaded the pinned SmolLM2 revision, initializ
 
 ## Next experiment
 
-Persist understandable download state across page reloads.
+Add application routing for Home, Models, Downloads, and Settings.

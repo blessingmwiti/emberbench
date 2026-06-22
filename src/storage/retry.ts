@@ -2,7 +2,7 @@ import { RuntimeError } from '../runtimes/core/errors';
 
 export interface RetryOptions {
   delaysMs?: number[];
-  onRetry?: (attempt: number, error: unknown) => void;
+  onRetry?: (attempt: number, error: unknown) => Promise<void> | void;
   signal?: AbortSignal;
 }
 
@@ -44,7 +44,7 @@ export async function withBoundedRetry<T>(
     } catch (error) {
       const delay = delays[attempt - 1];
       if (delay === undefined || !isRetriable(error)) throw error;
-      options.onRetry?.(attempt + 1, error);
+      await options.onRetry?.(attempt + 1, error);
       await wait(delay, options.signal);
     }
   }

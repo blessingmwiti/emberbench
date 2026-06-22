@@ -227,6 +227,7 @@ export function TextModelLab() {
       cachedFilesOnly ? 'verifying' : 'downloading',
     );
     await persistInstallRecord(record);
+    let lastPersistedProgress = record.downloadProgress ?? 0;
     setError(null);
     setProgress(0);
     setStatus('loading');
@@ -240,11 +241,24 @@ export function TextModelLab() {
             })) {
               if (event.type === 'progress' && mountedRef.current) {
                 setProgress(event.progress * 100);
+                if (Math.abs(event.progress - lastPersistedProgress) >= 0.05) {
+                  record = transitionInstalledModel(record, 'downloading', {
+                    downloadProgress: event.progress,
+                  });
+                  lastPersistedProgress = event.progress;
+                  await persistInstallRecord(record);
+                }
               }
             }
           },
           {
-            onRetry: (attempt) => {
+            onRetry: async (attempt) => {
+              record = transitionInstalledModel(record, 'downloading', {
+                downloadAttempt: attempt,
+                downloadProgress: 0,
+              });
+              lastPersistedProgress = 0;
+              await persistInstallRecord(record);
               if (mountedRef.current) {
                 setDownloadQueueMessage(`Retrying download · attempt ${attempt} of 3…`);
               }

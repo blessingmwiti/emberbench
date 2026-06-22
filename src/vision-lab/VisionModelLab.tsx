@@ -222,6 +222,7 @@ export function VisionModelLab() {
       cachedFilesOnly ? 'verifying' : 'downloading',
     );
     await persistRecord(record);
+    let lastPersistedProgress = record.downloadProgress ?? 0;
     setError(null);
     setProgress(0);
     setStatus('loading');
@@ -235,11 +236,24 @@ export function VisionModelLab() {
             })) {
               if (event.type === 'progress' && mountedRef.current) {
                 setProgress(event.progress * 100);
+                if (Math.abs(event.progress - lastPersistedProgress) >= 0.05) {
+                  record = transitionInstalledModel(record, 'downloading', {
+                    downloadProgress: event.progress,
+                  });
+                  lastPersistedProgress = event.progress;
+                  await persistRecord(record);
+                }
               }
             }
           },
           {
-            onRetry: (attempt) => {
+            onRetry: async (attempt) => {
+              record = transitionInstalledModel(record, 'downloading', {
+                downloadAttempt: attempt,
+                downloadProgress: 0,
+              });
+              lastPersistedProgress = 0;
+              await persistRecord(record);
               if (mountedRef.current) {
                 setDownloadQueueMessage(`Retrying download · attempt ${attempt} of 3…`);
               }

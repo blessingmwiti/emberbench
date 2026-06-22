@@ -25,7 +25,9 @@ function readInstallLabel(model: ModelManifest, installed: InstalledModel | unde
     case 'installed':
       return 'Offline ready';
     case 'downloading':
-      return 'Downloading';
+      return installed.downloadProgress === undefined
+        ? 'Downloading'
+        : `Downloading ${Math.round(installed.downloadProgress * 100)}%`;
     case 'verifying':
       return 'Verifying';
     case 'failed':

@@ -371,7 +371,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [x] Implement cancellation.
 - [x] Implement retry with bounded backoff.
 - [ ] Implement resume where technically supported.
-- [ ] Preserve understandable state after page reload.
+- [x] Preserve understandable state after page reload.
 - [x] Check available storage before starting.
 - [x] Warn about metered or very large downloads where detectable.
 - [ ] Handle offline transitions during download.
@@ -1108,4 +1108,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Add settings persistence and a full local-data reset flow.
 - [x] Add queued download coordination and duplicate-download prevention.
 - [x] Add download cancellation and bounded retry handling.
-- [ ] Persist understandable download state across page reloads.
+- [x] Persist understandable download state across page reloads.
+- [ ] Add application routing for Home, Models, Downloads, and Settings.

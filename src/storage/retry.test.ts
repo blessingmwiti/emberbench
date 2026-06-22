@@ -27,4 +27,28 @@ describe('bounded retry', () => {
     await expect(withBoundedRetry(unsupported, { delaysMs: [0] })).rejects.toThrow('unsupported');
     expect(unsupported).toHaveBeenCalledTimes(1);
   });
+
+  it('awaits retry state persistence before the next attempt', async () => {
+    const order: string[] = [];
+    const operation = vi
+      .fn<(_: number) => Promise<string>>()
+      .mockImplementationOnce(() => {
+        order.push('attempt-1');
+        return Promise.reject(new RuntimeError('DOWNLOAD_FAILED', 'network'));
+      })
+      .mockImplementationOnce(() => {
+        order.push('attempt-2');
+        return Promise.resolve('done');
+      });
+
+    await withBoundedRetry(operation, {
+      delaysMs: [0],
+      onRetry: async () => {
+        await Promise.resolve();
+        order.push('persisted');
+      },
+    });
+
+    expect(order).toEqual(['attempt-1', 'persisted', 'attempt-2']);
+  });
 });
