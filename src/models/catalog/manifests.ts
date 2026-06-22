@@ -7,6 +7,39 @@ export const curatedModels = [
         path: 'onnx/model_q4.onnx',
         precision: 'q4',
         role: 'model',
+        sizeBytes: 862_087_110,
+      },
+    ],
+    capabilities: ['chat', 'code'],
+    description:
+      'A compact instruction-tuned code model for local explanation, generation, refactoring, debugging, and review.',
+    id: 'qwen2.5-coder-0.5b-q4',
+    license: {
+      id: 'apache-2.0',
+      sourceUrl: 'https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B-Instruct',
+    },
+    name: 'Qwen2.5-Coder 0.5B',
+    requirements: {
+      deviceTier: 'standard',
+      runtime: 'transformers-js',
+      task: 'text-generation',
+    },
+    schemaVersion: 1,
+    source: {
+      baseModelId: 'Qwen/Qwen2.5-Coder-0.5B-Instruct',
+      modelId: 'onnx-community/Qwen2.5-Coder-0.5B-Instruct',
+      provider: 'huggingface',
+      revision: 'f0292f665fd307846ff3c318a91a1bc29d091492',
+    },
+    status: 'experimental',
+    workspaces: ['code'],
+  }),
+  validateModelManifest({
+    artifacts: [
+      {
+        path: 'onnx/model_q4.onnx',
+        precision: 'q4',
+        role: 'model',
         sizeBytes: 275_214,
       },
       {

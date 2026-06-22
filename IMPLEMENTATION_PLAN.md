@@ -487,19 +487,19 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [x] Persist conversations locally.
 - [x] Delete individual conversations.
 - [x] Expose generation settings behind an advanced panel.
-- [ ] Display the active model and local-processing status.
+- [x] Display the active model and local-processing status.
 
 ### Code Lab workspace
 
-- [ ] Add syntax-aware code input.
-- [ ] Add language selection and automatic hints.
-- [ ] Add Explain, Generate, Refactor, Debug, and Review modes.
-- [ ] Define mode-specific prompt recipes.
-- [ ] Render code and diffs legibly.
-- [ ] Copy generated code.
-- [ ] Preserve code sessions locally.
-- [ ] Add input-size and context warnings.
-- [ ] Clearly state that output must be reviewed before execution.
+- [~] Add syntax-aware code input.
+- [x] Add language selection and automatic hints.
+- [x] Add Explain, Generate, Refactor, Debug, and Review modes.
+- [x] Define mode-specific prompt recipes.
+- [x] Render code and diffs legibly.
+- [x] Copy generated code.
+- [x] Preserve code sessions locally.
+- [x] Add input-size and context warnings.
+- [x] Clearly state that output must be reviewed before execution.
 
 ### Third MVP workspace
 
@@ -1129,4 +1129,9 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Add safe Markdown and code-block rendering to General Assistant.
 - [x] Add edit-and-resubmit support for prior user messages.
 - [x] Expose General Assistant generation settings in an advanced panel.
-- [ ] Display the active General Assistant model and local-processing status.
+- [x] Display the active General Assistant model and local-processing status.
+- [x] Build the first Code Lab workspace shell on the shared session repository.
+- [x] Select and validate a browser-compatible curated code model for Code Lab.
+- [x] Install and run the pinned Qwen2.5-Coder 0.5B q4 model in a real browser probe.
+- [~] Add syntax highlighting and dedicated diff rendering to Code Lab.
+- [ ] Complete dependency-free syntax highlighting and editor indentation support.

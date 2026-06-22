@@ -62,6 +62,41 @@ function isBlockStart(line: string) {
   );
 }
 
+function renderFencedCode(code: string[], language: string | undefined, key: string) {
+  const normalizedLanguage = language || 'text';
+  if (normalizedLanguage === 'diff') {
+    return (
+      <pre className="markdown-code-block markdown-code-block--diff" data-language="diff" key={key}>
+        <code data-language="diff">
+          {code.map((line, lineIndex) => {
+            const kind =
+              line.startsWith('+++') || line.startsWith('---')
+                ? 'metadata'
+                : line.startsWith('@@')
+                  ? 'hunk'
+                  : line.startsWith('+')
+                    ? 'addition'
+                    : line.startsWith('-')
+                      ? 'removal'
+                      : 'context';
+            return (
+              <span className={`markdown-diff-line markdown-diff-line--${kind}`} key={lineIndex}>
+                {line || ' '}
+              </span>
+            );
+          })}
+        </code>
+      </pre>
+    );
+  }
+
+  return (
+    <pre className="markdown-code-block" data-language={normalizedLanguage} key={key}>
+      <code data-language={normalizedLanguage}>{code.join('\n')}</code>
+    </pre>
+  );
+}
+
 export function MarkdownContent({ content }: MarkdownContentProps) {
   const lines = content.replace(/\r\n?/g, '\n').split('\n');
   const blocks: ReactNode[] = [];
@@ -83,11 +118,7 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
       }
       if (index < lines.length) index += 1;
       const language = fence[1]?.toLowerCase();
-      blocks.push(
-        <pre key={`code-${index}`}>
-          <code data-language={language}>{code.join('\n')}</code>
-        </pre>,
-      );
+      blocks.push(renderFencedCode(code, language, `code-${index}`));
       continue;
     }
 

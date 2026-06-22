@@ -3,7 +3,10 @@ import { useEffect, useRef, useState } from 'react';
 import { findCuratedModel } from '../models/catalog/registry';
 import { RuntimeError } from '../runtimes/core/errors';
 import { TransformersTextWorkerAdapter } from '../runtimes/transformers/text-worker-adapter';
-import { resolveTransformersRuntimeDevice } from '../runtimes/transformers/runtime-device';
+import {
+  resolveTransformersRuntimeDevice,
+  type TransformersRuntimeDevice,
+} from '../runtimes/transformers/runtime-device';
 import {
   appSettings,
   DEFAULT_ASSISTANT_GENERATION_SETTINGS,
@@ -53,6 +56,7 @@ export function AssistantWorkspace() {
   const [generationSettings, setGenerationSettings] = useState<AssistantGenerationSettings>(
     DEFAULT_ASSISTANT_GENERATION_SETTINGS,
   );
+  const [runtimeDevice, setRuntimeDevice] = useState<TransformersRuntimeDevice | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -84,7 +88,10 @@ export function AssistantWorkspace() {
   }, []);
 
   useEffect(() => {
-    void appSettings.get().then((settings) => setGenerationSettings(settings.assistantGeneration));
+    void appSettings.get().then((settings) => {
+      setGenerationSettings(settings.assistantGeneration);
+      setRuntimeDevice(resolveTransformersRuntimeDevice(settings.runtimePreference));
+    });
   }, []);
 
   async function ensureReady() {
@@ -92,6 +99,7 @@ export function AssistantWorkspace() {
     setStatus('loading');
     const settings = await appSettings.get();
     const device = resolveTransformersRuntimeDevice(settings.runtimePreference);
+    setRuntimeDevice(device);
     const adapter = new TransformersTextWorkerAdapter(undefined, device);
     adapterRef.current?.terminate();
     adapterRef.current = adapter;
@@ -322,6 +330,40 @@ export function AssistantWorkspace() {
         </aside>
 
         <div className="assistant-chat">
+          <div className="assistant-runtime-status" role="status">
+            <div>
+              <span>Active model</span>
+              <strong>{assistantModel.name}</strong>
+            </div>
+            <div>
+              <span>Runtime</span>
+              <strong>
+                {runtimeDevice === 'webgpu'
+                  ? 'WebGPU'
+                  : runtimeDevice === 'wasm'
+                    ? 'WebAssembly'
+                    : 'Detecting…'}
+              </strong>
+            </div>
+            <div>
+              <span>Privacy</span>
+              <strong>Cached files only</strong>
+            </div>
+            <div className={`assistant-runtime-status__state is-${status}`}>
+              <span>Local inference</span>
+              <strong>
+                {status === 'loading'
+                  ? 'Loading'
+                  : status === 'running'
+                    ? 'Generating'
+                    : status === 'error'
+                      ? 'Needs attention'
+                      : status === 'ready'
+                        ? 'Ready'
+                        : 'On demand'}
+              </strong>
+            </div>
+          </div>
           <div className="assistant-messages" aria-live="polite">
             {session?.messages.length ? (
               session.messages.map((message, messageIndex) => (
