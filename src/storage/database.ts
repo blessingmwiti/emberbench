@@ -1,5 +1,6 @@
 import type { InstalledModel } from '../models/catalog/types';
 import { parseInstalledModel } from '../models/installed-model';
+import type { TransformersRuntimePreference } from '../runtimes/transformers/runtime-device';
 
 const DATABASE_NAME = 'emberbench';
 const DATABASE_VERSION = 2;
@@ -164,6 +165,7 @@ export interface AppSettings {
   confirmLargeDownloads: boolean;
   defaultCachedFilesOnly: boolean;
   id: 'app';
+  runtimePreference: TransformersRuntimePreference;
   schemaVersion: 1;
 }
 
@@ -171,6 +173,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   confirmLargeDownloads: true,
   defaultCachedFilesOnly: false,
   id: 'app',
+  runtimePreference: 'auto',
   schemaVersion: 1,
 };
 
@@ -185,7 +188,12 @@ export function parseAppSettings(value: unknown): AppSettings | null {
   ) {
     return null;
   }
-  return settings as AppSettings;
+  const runtimePreference = settings.runtimePreference ?? 'auto';
+  if (!['auto', 'webgpu', 'wasm'].includes(runtimePreference)) return null;
+  return {
+    ...settings,
+    runtimePreference,
+  } as AppSettings;
 }
 
 export class SettingsRepository {

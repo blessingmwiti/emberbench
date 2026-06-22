@@ -5,7 +5,10 @@ import { findCuratedModel } from '../models/catalog/registry';
 import type { InstalledModel } from '../models/catalog/types';
 import { RuntimeError } from '../runtimes/core/errors';
 import type { RuntimeCacheStatus, RuntimeEvent } from '../runtimes/core/types';
-import { discoverTransformersRuntimeDevice } from '../runtimes/transformers/runtime-device';
+import {
+  discoverTransformersRuntimeDevice,
+  resolveTransformersRuntimeDevice,
+} from '../runtimes/transformers/runtime-device';
 import { TransformersVisionWorkerAdapter } from '../runtimes/transformers/vision-worker-adapter';
 import {
   appSettings,
@@ -23,7 +26,6 @@ if (!curatedVisionModel) {
   throw new Error('The curated Vision Model Lab model is missing.');
 }
 const visionModel = curatedVisionModel;
-const runtimeDevice = discoverTransformersRuntimeDevice();
 
 function formatDuration(milliseconds: number | null) {
   if (milliseconds === null) return '—';
@@ -69,6 +71,7 @@ export function VisionModelLab() {
   const [confirmLargeDownloads, setConfirmLargeDownloads] = useState(true);
   const [downloadQueueMessage, setDownloadQueueMessage] = useState<string | null>(null);
   const [downloadCancellable, setDownloadCancellable] = useState(false);
+  const [runtimeDevice, setRuntimeDevice] = useState(discoverTransformersRuntimeDevice);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -91,6 +94,8 @@ export function VisionModelLab() {
           if (mountedRef.current) {
             setCachedFilesOnly(settings.defaultCachedFilesOnly);
             setConfirmLargeDownloads(settings.confirmLargeDownloads);
+            const nextDevice = resolveTransformersRuntimeDevice(settings.runtimePreference);
+            setRuntimeDevice(nextDevice);
           }
         })
         .catch(() => {});

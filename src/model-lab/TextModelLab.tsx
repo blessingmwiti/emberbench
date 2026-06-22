@@ -14,7 +14,10 @@ import { installModel } from '../storage/install-model';
 import type { RuntimeCacheStatus, RuntimeEvent } from '../runtimes/core/types';
 import { RuntimeError } from '../runtimes/core/errors';
 import { TransformersTextWorkerAdapter } from '../runtimes/transformers/text-worker-adapter';
-import { discoverTransformersRuntimeDevice } from '../runtimes/transformers/runtime-device';
+import {
+  discoverTransformersRuntimeDevice,
+  resolveTransformersRuntimeDevice,
+} from '../runtimes/transformers/runtime-device';
 
 type LabStatus = 'idle' | 'loading' | 'ready' | 'generating' | 'cancelling' | 'error';
 
@@ -32,7 +35,6 @@ if (!curatedTextModel) {
 }
 
 const textModel = curatedTextModel;
-const runtimeDevice = discoverTransformersRuntimeDevice();
 
 function formatDuration(milliseconds: number | null) {
   if (milliseconds === null) {
@@ -79,6 +81,7 @@ export function TextModelLab() {
   const [confirmLargeDownloads, setConfirmLargeDownloads] = useState(true);
   const [downloadQueueMessage, setDownloadQueueMessage] = useState<string | null>(null);
   const [downloadCancellable, setDownloadCancellable] = useState(false);
+  const [runtimeDevice, setRuntimeDevice] = useState(discoverTransformersRuntimeDevice);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -103,6 +106,8 @@ export function TextModelLab() {
           if (mountedRef.current) {
             setCachedFilesOnly(settings.defaultCachedFilesOnly);
             setConfirmLargeDownloads(settings.confirmLargeDownloads);
+            const nextDevice = resolveTransformersRuntimeDevice(settings.runtimePreference);
+            setRuntimeDevice(nextDevice);
           }
         })
         .catch(() => {});
@@ -325,8 +330,8 @@ export function TextModelLab() {
         </div>
         <p>
           This experiment downloads a quantized 135M-parameter model from Hugging Face, loads it
-          through WebGPU in a worker, and measures generation. The first download is substantial;
-          nothing starts until you ask.
+          through {runtimeDevice === 'webgpu' ? 'WebGPU' : 'WebAssembly'} in a worker, and measures
+          generation. The first download is substantial; nothing starts until you ask.
         </p>
       </div>
 

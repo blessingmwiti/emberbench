@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { discoverTransformersRuntimeDevice } from './runtime-device';
+import {
+  discoverTransformersRuntimeDevice,
+  resolveTransformersRuntimeDevice,
+} from './runtime-device';
 
 describe('Transformers.js runtime discovery', () => {
   afterEach(() => {
@@ -21,5 +24,13 @@ describe('Transformers.js runtime discovery', () => {
     Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true });
     Object.defineProperty(navigator, 'gpu', { configurable: true, value: undefined });
     expect(discoverTransformersRuntimeDevice()).toBe('wasm');
+  });
+
+  it('allows WebAssembly to be forced on a WebGPU-capable browser', () => {
+    Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true });
+    Object.defineProperty(navigator, 'gpu', { configurable: true, value: {} });
+    expect(resolveTransformersRuntimeDevice('auto')).toBe('webgpu');
+    expect(resolveTransformersRuntimeDevice('webgpu')).toBe('webgpu');
+    expect(resolveTransformersRuntimeDevice('wasm')).toBe('wasm');
   });
 });

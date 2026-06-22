@@ -4,7 +4,8 @@ import { formatBytes } from '../diagnostics/format';
 import { findCuratedModel } from '../models/catalog/registry';
 import type { InstalledModel } from '../models/catalog/types';
 import { createRuntimeAdapter } from '../runtimes/create-runtime-adapter';
-import { INSTALLED_MODELS_CHANGED_EVENT, installedModels } from '../storage/database';
+import { resolveTransformersRuntimeDevice } from '../runtimes/transformers/runtime-device';
+import { appSettings, INSTALLED_MODELS_CHANGED_EVENT, installedModels } from '../storage/database';
 import { runDownloadPreflight } from '../storage/download-preflight';
 import { installModel } from '../storage/install-model';
 import { removeInstalledModel } from '../storage/remove-installed-model';
@@ -96,7 +97,11 @@ export function DownloadCenter() {
     }
 
     const controller = new AbortController();
-    const adapter = createRuntimeAdapter(manifest);
+    const settings = await appSettings.get();
+    const adapter = createRuntimeAdapter(
+      manifest,
+      resolveTransformersRuntimeDevice(settings.runtimePreference),
+    );
     retryControllers.current.set(record.modelId, controller);
     setRetryingModelId(record.modelId);
     setRetryMessage(preflight.status === 'warning' ? preflight.message : null);

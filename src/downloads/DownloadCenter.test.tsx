@@ -9,6 +9,9 @@ const { install, listModels, removeModel, terminate } = vi.hoisted(() => ({
 }));
 
 vi.mock('../storage/database', () => ({
+  appSettings: {
+    get: () => Promise.resolve({ runtimePreference: 'auto' }),
+  },
   INSTALLED_MODELS_CHANGED_EVENT: 'emberbench:installed-models-changed',
   installedModels: {
     list: listModels,

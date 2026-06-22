@@ -10,5 +10,12 @@ describe('application settings schema', () => {
   it('rejects incompatible or malformed settings', () => {
     expect(parseAppSettings({ ...DEFAULT_APP_SETTINGS, schemaVersion: 2 })).toBeNull();
     expect(parseAppSettings({ ...DEFAULT_APP_SETTINGS, defaultCachedFilesOnly: 'yes' })).toBeNull();
+    expect(parseAppSettings({ ...DEFAULT_APP_SETTINGS, runtimePreference: 'gpu' })).toBeNull();
+  });
+
+  it('migrates settings saved before runtime preference existed', () => {
+    const legacy: Partial<typeof DEFAULT_APP_SETTINGS> = { ...DEFAULT_APP_SETTINGS };
+    delete legacy.runtimePreference;
+    expect(parseAppSettings(legacy)?.runtimePreference).toBe('auto');
   });
 });

@@ -178,6 +178,8 @@ Direct worker tests now execute the worker modules with a mocked Transformers.js
 
 Runtime discovery now selects WebGPU only when it is exposed in a secure context and otherwise sends an explicit WebAssembly device choice through adapters and workers. Diagnostics report the wired fallback and recommend compact models instead of marking WebGPU-less browsers wholly unsupported. Direct worker tests verify the WASM selection reaches Transformers.js; real fallback inference is the next validation step.
 
+The local Runtime preference now supports Auto, Prefer WebGPU, and Force WebAssembly. A real forced-WASM SmolLM2 probe completed on June 22, 2026: 100.11 seconds cold load including the remaining download, 6/6 files verified, 2.54 seconds to first token, and 48.71 seconds for 64 generated tokens. A subsequent cached-files-only WASM load completed in 7.54 seconds with remote model requests blocked.
+
 ## Open feasibility risks
 
 - Real browser propagation of WebGPU device loss during active inference
@@ -190,4 +192,4 @@ Runtime discovery now selects WebGPU only when it is exposed in a secure context
 
 ## Next experiment
 
-Add a force-WebAssembly preference and run a real fallback inference probe.
+Persist benchmark summaries for completed model runs.

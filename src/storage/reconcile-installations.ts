@@ -1,7 +1,8 @@
 import { findCuratedModel } from '../models/catalog/registry';
 import { reconcileInstalledModel } from '../models/reconcile-installed-model';
 import { createRuntimeAdapter } from '../runtimes/create-runtime-adapter';
-import { installedModels } from './database';
+import { resolveTransformersRuntimeDevice } from '../runtimes/transformers/runtime-device';
+import { appSettings, installedModels } from './database';
 
 export interface ReconciliationSummary {
   checked: number;
@@ -11,6 +12,7 @@ export interface ReconciliationSummary {
 
 export async function reconcileInstallations(): Promise<ReconciliationSummary> {
   const records = await installedModels.list();
+  const settings = await appSettings.get();
   const summary: ReconciliationSummary = {
     checked: 0,
     repaired: 0,
@@ -21,7 +23,10 @@ export async function reconcileInstallations(): Promise<ReconciliationSummary> {
     const manifest = findCuratedModel(record.modelId);
     if (!manifest) continue;
 
-    const adapter = createRuntimeAdapter(manifest);
+    const adapter = createRuntimeAdapter(
+      manifest,
+      resolveTransformersRuntimeDevice(settings.runtimePreference),
+    );
     try {
       const cache = await adapter.inspectCache(manifest);
       const reconciled = reconcileInstalledModel(record, manifest, cache);

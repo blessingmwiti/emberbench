@@ -828,6 +828,20 @@ h2 {
   accent-color: var(--ember);
 }
 
+.settings-card .settings-runtime {
+  display: grid;
+  gap: 14px;
+}
+
+.settings-runtime select {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--cream);
+}
+
 .settings-card label span {
   display: grid;
   gap: 5px;

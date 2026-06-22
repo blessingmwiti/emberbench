@@ -105,6 +105,29 @@ export function SettingsPanel() {
               <small>Ask before downloads flagged as large or reduced-data.</small>
             </span>
           </label>
+          <label className="settings-runtime">
+            <span>
+              Runtime preference
+              <small>
+                Auto prefers WebGPU and falls back to WebAssembly. Force WebAssembly for
+                compatibility testing or GPU troubleshooting.
+              </small>
+            </span>
+            <select
+              aria-label="Runtime preference"
+              disabled={saving}
+              onChange={(event) =>
+                void updateSettings({
+                  runtimePreference: event.target.value as AppSettings['runtimePreference'],
+                })
+              }
+              value={settings.runtimePreference}
+            >
+              <option value="auto">Auto (recommended)</option>
+              <option value="webgpu">Prefer WebGPU</option>
+              <option value="wasm">Force WebAssembly</option>
+            </select>
+          </label>
         </div>
 
         <div className="settings-card settings-card--danger">
