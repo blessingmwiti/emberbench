@@ -346,7 +346,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [x] Add schema migrations.
 - [x] Store model installation metadata.
 - [x] Store application settings.
-- [ ] Store conversations and workspace sessions.
+- [x] Store conversations and workspace sessions.
 - [x] Store benchmark summaries.
 - [x] Implement transactional writes where state must remain consistent.
 - [x] Handle corrupted or incompatible persisted data.
@@ -1123,4 +1123,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Implement runtime discovery and practical WebAssembly fallback rules.
 - [x] Add a force-WebAssembly preference and run a real fallback inference probe.
 - [x] Persist benchmark summaries for completed model runs.
-- [ ] Persist workspace sessions and conversation history locally.
+- [x] Persist workspace sessions and conversation history locally.
+- [ ] Build the General Assistant workspace on the session repository.

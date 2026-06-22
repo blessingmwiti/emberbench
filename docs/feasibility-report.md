@@ -182,6 +182,8 @@ The local Runtime preference now supports Auto, Prefer WebGPU, and Force WebAsse
 
 Successful text and vision runs now write versioned local benchmark summaries containing only model, task, runtime device, timings, and output-unit counts. Prompts, generated text, captions, and images are excluded. The Models route shows the six most recent results, and full local-data reset clears them.
 
+Workspace sessions now have a versioned local schema and IndexedDB repository with validated user/assistant messages, first-message titles, chronological listing, updates, deletion, and full-reset coverage. This is the persistence foundation for task-focused workspaces; no account or sync service is involved.
+
 ## Open feasibility risks
 
 - Real browser propagation of WebGPU device loss during active inference
@@ -194,4 +196,4 @@ Successful text and vision runs now write versioned local benchmark summaries co
 
 ## Next experiment
 
-Persist workspace sessions and conversation history locally.
+Build the General Assistant workspace on the session repository.

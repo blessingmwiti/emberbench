@@ -2,15 +2,19 @@ import type { InstalledModel } from '../models/catalog/types';
 import { parseInstalledModel } from '../models/installed-model';
 import type { TransformersRuntimePreference } from '../runtimes/transformers/runtime-device';
 import type { TransformersRuntimeDevice } from '../runtimes/transformers/runtime-device';
+import type { WorkspaceSession } from '../workspaces/session';
+import { parseWorkspaceSession } from '../workspaces/session';
 
 const DATABASE_NAME = 'emberbench';
-const DATABASE_VERSION = 3;
+const DATABASE_VERSION = 4;
 const BENCHMARKS_STORE = 'benchmarks';
 const INSTALLED_MODELS_STORE = 'installed-models';
 const SETTINGS_STORE = 'settings';
+const WORKSPACE_SESSIONS_STORE = 'workspace-sessions';
 export const INSTALLED_MODELS_CHANGED_EVENT = 'emberbench:installed-models-changed';
 export const SETTINGS_CHANGED_EVENT = 'emberbench:settings-changed';
 export const BENCHMARKS_CHANGED_EVENT = 'emberbench:benchmarks-changed';
+export const WORKSPACE_SESSIONS_CHANGED_EVENT = 'emberbench:workspace-sessions-changed';
 
 function announceInstalledModelsChanged() {
   if (typeof window !== 'undefined') {
@@ -27,6 +31,12 @@ function announceSettingsChanged() {
 function announceBenchmarksChanged() {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event(BENCHMARKS_CHANGED_EVENT));
+  }
+}
+
+function announceWorkspaceSessionsChanged() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(WORKSPACE_SESSIONS_CHANGED_EVENT));
   }
 }
 
@@ -81,6 +91,13 @@ export function openEmberbenchDatabase(factory: IDBFactory = indexedDB): Promise
         });
         store.createIndex('createdAt', 'createdAt');
         store.createIndex('modelId', 'modelId');
+      }
+      if (!database.objectStoreNames.contains(WORKSPACE_SESSIONS_STORE)) {
+        const store = database.createObjectStore(WORKSPACE_SESSIONS_STORE, {
+          keyPath: 'id',
+        });
+        store.createIndex('updatedAt', 'updatedAt');
+        store.createIndex('workspace', 'workspace');
       }
     });
     request.addEventListener('success', () => resolve(request.result), { once: true });
@@ -330,17 +347,82 @@ export class BenchmarkRepository {
 
 export const benchmarks = new BenchmarkRepository();
 
+export class WorkspaceSessionRepository {
+  constructor(private readonly factory?: IDBFactory) {}
+
+  async delete(id: string): Promise<void> {
+    const database = await openEmberbenchDatabase(this.factory);
+    try {
+      const transaction = database.transaction(WORKSPACE_SESSIONS_STORE, 'readwrite');
+      const completed = transactionCompleted(transaction);
+      await requestResult(transaction.objectStore(WORKSPACE_SESSIONS_STORE).delete(id));
+      await completed;
+      announceWorkspaceSessionsChanged();
+    } finally {
+      database.close();
+    }
+  }
+
+  async get(id: string): Promise<WorkspaceSession | null> {
+    const database = await openEmberbenchDatabase(this.factory);
+    try {
+      const transaction = database.transaction(WORKSPACE_SESSIONS_STORE, 'readonly');
+      const value = await requestResult(
+        transaction.objectStore(WORKSPACE_SESSIONS_STORE).get(id) as IDBRequest<unknown>,
+      );
+      return parseWorkspaceSession(value);
+    } finally {
+      database.close();
+    }
+  }
+
+  async list(): Promise<WorkspaceSession[]> {
+    const database = await openEmberbenchDatabase(this.factory);
+    try {
+      const transaction = database.transaction(WORKSPACE_SESSIONS_STORE, 'readonly');
+      const values = await requestResult(
+        transaction.objectStore(WORKSPACE_SESSIONS_STORE).getAll() as IDBRequest<unknown[]>,
+      );
+      return values
+        .map(parseWorkspaceSession)
+        .filter((value): value is WorkspaceSession => value !== null)
+        .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+    } finally {
+      database.close();
+    }
+  }
+
+  async put(session: WorkspaceSession): Promise<void> {
+    if (!parseWorkspaceSession(session)) {
+      throw new Error('Refusing to persist an invalid workspace session.');
+    }
+    const database = await openEmberbenchDatabase(this.factory);
+    try {
+      const transaction = database.transaction(WORKSPACE_SESSIONS_STORE, 'readwrite');
+      const completed = transactionCompleted(transaction);
+      await requestResult(transaction.objectStore(WORKSPACE_SESSIONS_STORE).put(session));
+      await completed;
+      announceWorkspaceSessionsChanged();
+    } finally {
+      database.close();
+    }
+  }
+}
+
+export const workspaceSessions = new WorkspaceSessionRepository();
+
 export async function clearEmberbenchDatabase(factory: IDBFactory = indexedDB): Promise<void> {
   const database = await openEmberbenchDatabase(factory);
   try {
     const transaction = database.transaction(
-      [BENCHMARKS_STORE, INSTALLED_MODELS_STORE, SETTINGS_STORE],
+      [BENCHMARKS_STORE, INSTALLED_MODELS_STORE, SETTINGS_STORE, WORKSPACE_SESSIONS_STORE],
       'readwrite',
     );
     const completed = transactionCompleted(transaction);
     transaction.objectStore(INSTALLED_MODELS_STORE).clear();
     transaction.objectStore(SETTINGS_STORE).clear();
     transaction.objectStore(BENCHMARKS_STORE).clear();
+    transaction.objectStore(WORKSPACE_SESSIONS_STORE).clear();
     await completed;
   } finally {
     database.close();
@@ -348,4 +430,5 @@ export async function clearEmberbenchDatabase(factory: IDBFactory = indexedDB): 
   announceInstalledModelsChanged();
   announceSettingsChanged();
   announceBenchmarksChanged();
+  announceWorkspaceSessionsChanged();
 }
