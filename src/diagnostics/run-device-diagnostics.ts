@@ -4,6 +4,7 @@ const unsupportedWebGpu = (error: string): WebGpuDiagnostic => ({
   adapterInfo: {},
   error,
   featureCount: 0,
+  features: [],
   limits: null,
   status: 'unsupported',
 });
@@ -57,6 +58,7 @@ async function inspectWebGpu(): Promise<WebGpuDiagnostic> {
       },
       error: null,
       featureCount: device.features.size,
+      features: [...device.features].sort(),
       limits: {
         maxBufferSize: device.limits.maxBufferSize,
         maxStorageBufferBindingSize: device.limits.maxStorageBufferBindingSize,
@@ -78,12 +80,42 @@ async function inspectWebGpu(): Promise<WebGpuDiagnostic> {
 
 export async function runDeviceDiagnostics(): Promise<DeviceDiagnostic> {
   const [storage, webGpu] = await Promise.all([inspectStorage(), inspectWebGpu()]);
+  const wasm = typeof WebAssembly !== 'undefined';
+  const supportedPaths = [
+    ...(webGpu.status === 'ready' ? ['Transformers.js / WebGPU'] : []),
+    ...(wasm ? ['WebAssembly available (fallback not wired)'] : []),
+  ];
 
   return {
+    browser: {
+      browser: readBrowserName(navigator.userAgent),
+      platform: navigator.platform || 'Not reported',
+    },
     checkedAt: new Date().toISOString(),
     online: navigator.onLine,
+    runtime: {
+      supportedPaths,
+      wasm,
+      webGpu: webGpu.status === 'ready',
+    },
     secureContext: window.isSecureContext,
     storage,
     webGpu,
   };
+}
+
+function readBrowserName(userAgent: string) {
+  if (userAgent.includes('Edg/')) return 'Microsoft Edge';
+  if (userAgent.includes('Chrome/')) return 'Chromium';
+  if (userAgent.includes('Firefox/')) return 'Firefox';
+  if (userAgent.includes('Safari/') && !userAgent.includes('Chrome/')) return 'Safari';
+  return 'Unrecognized browser';
+}
+
+export async function requestPersistentStorage(): Promise<boolean | null> {
+  if (!navigator.storage?.persist) {
+    return null;
+  }
+
+  return navigator.storage.persist();
 }

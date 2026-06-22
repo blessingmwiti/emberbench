@@ -1,10 +1,21 @@
 export const TEXT_SPIKE_MODEL = 'onnx-community/SmolLM2-135M-ONNX';
 
+export interface ModelCacheFile {
+  cached: boolean;
+  file: string;
+}
+
+export interface TextModelWorkerConfig {
+  dtype?: 'fp16' | 'fp32' | 'q4' | 'q4f16' | 'q8';
+  modelId?: string;
+  revision?: string;
+}
+
 export type TextModelWorkerRequest =
-  | {
+  | (TextModelWorkerConfig & {
       cachedFilesOnly?: boolean;
       type: 'load';
-    }
+    })
   | {
       maxNewTokens: number;
       prompt: string;
@@ -14,6 +25,12 @@ export type TextModelWorkerRequest =
   | {
       type: 'cancel';
     }
+  | (TextModelWorkerConfig & {
+      type: 'inspect-cache';
+    })
+  | (TextModelWorkerConfig & {
+      type: 'delete-cache';
+    })
   | {
       type: 'unload';
     };
@@ -21,6 +38,7 @@ export type TextModelWorkerRequest =
 export type TextModelWorkerEvent =
   | {
       cached: boolean;
+      files: ModelCacheFile[];
       type: 'cache-status';
     }
   | {
@@ -55,4 +73,9 @@ export type TextModelWorkerEvent =
     }
   | {
       type: 'unloaded';
+    }
+  | {
+      filesCached: number;
+      filesDeleted: number;
+      type: 'cache-deleted';
     };

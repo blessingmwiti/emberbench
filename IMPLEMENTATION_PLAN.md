@@ -123,7 +123,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [ ] Compare Cache API, IndexedDB, and OPFS for the required model files.
 - [ ] Verify whether large files are duplicated between runtime and application storage.
 - [x] Test `navigator.storage.estimate()`.
-- [ ] Test `navigator.storage.persist()`.
+- [x] Test `navigator.storage.persist()`.
 - [ ] Simulate an interrupted model download.
 - [ ] Determine whether downloads can resume or must restart.
 - [ ] Test model deletion and verify that storage is reclaimed.
@@ -131,16 +131,16 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Hugging Face inspection spike
 
-- [ ] Parse `owner/model` identifiers.
-- [ ] Parse standard Hugging Face model URLs.
-- [ ] Reject malformed and non-Hugging Face URLs safely.
-- [ ] Fetch public repository metadata.
-- [ ] Inspect repository siblings/files.
-- [ ] Read `config.json` without executing repository code.
-- [ ] Identify ONNX and quantized artifacts.
-- [ ] Identify required tokenizer and processor assets.
-- [ ] Detect repositories that require authentication.
-- [ ] Produce a rough `ready`, `conversion-required`, or `unsupported` result.
+- [x] Parse `owner/model` identifiers.
+- [x] Parse standard Hugging Face model URLs.
+- [x] Reject malformed and non-Hugging Face URLs safely.
+- [x] Fetch public repository metadata.
+- [x] Inspect repository siblings/files.
+- [x] Read configuration metadata without executing repository code.
+- [x] Identify ONNX and quantized artifacts.
+- [x] Identify required tokenizer and processor assets.
+- [x] Detect repositories that require authentication.
+- [x] Produce a rough `ready`, `conversion-required`, or `unsupported` result.
 
 ### Feasibility report
 
@@ -206,7 +206,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [x] Create the global layout.
 - [ ] Add routing.
 - [~] Add navigation for Home, Workspaces, Models, Downloads, and Settings.
-- [ ] Add a global error boundary.
+- [x] Add a global error boundary.
 - [ ] Add toast or notification infrastructure.
 - [ ] Add loading, empty, warning, and fatal-error patterns.
 - [x] Add responsive desktop and mobile layouts.
@@ -239,42 +239,42 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Shared model types
 
-- [ ] Define `ModelSource`.
-- [ ] Define `ModelManifest`.
-- [ ] Define `ModelArtifact`.
-- [ ] Define `ModelCapability`.
-- [ ] Define `ModelPrecision`.
-- [ ] Define `RuntimeRequirement`.
-- [ ] Define `CompatibilityReport`.
-- [ ] Define `InstalledModel`.
-- [ ] Define `ModelSession`.
-- [ ] Define serializable model input and output event types.
-- [ ] Version persisted schemas from the beginning.
+- [x] Define `ModelSource`.
+- [x] Define `ModelManifest`.
+- [x] Define `ModelArtifact`.
+- [x] Define `ModelCapability`.
+- [x] Define `ModelPrecision`.
+- [x] Define `RuntimeRequirement`.
+- [x] Define `CompatibilityReport`.
+- [x] Define `InstalledModel`.
+- [x] Define `ModelSession`.
+- [x] Define serializable model input and output event types.
+- [x] Version model manifest schemas from the beginning.
 
 ### Runtime contract
 
-- [ ] Define the common runtime adapter interface.
-- [ ] Define inspect, download, load, run, abort, and unload behavior.
-- [ ] Define streaming event semantics.
-- [ ] Define progress event semantics.
-- [ ] Define runtime error codes.
-- [ ] Define cancellation semantics.
-- [ ] Define session and resource ownership.
-- [ ] Define runtime capability discovery.
-- [ ] Add contract tests that every adapter must pass.
+- [x] Define the common runtime adapter interface.
+- [x] Define inspect, download, load, run, abort, and unload behavior.
+- [x] Define streaming event semantics.
+- [x] Define progress event semantics.
+- [x] Define runtime error codes.
+- [x] Define cancellation semantics.
+- [x] Define session and resource ownership.
+- [x] Define runtime capability discovery.
+- [x] Add initial runtime contract tests.
 
 ### Curated model registry
 
-- [ ] Define a validated manifest file format.
-- [ ] Add schema validation for manifests.
-- [ ] Add source repository and pinned revision fields.
-- [ ] Add model license fields.
-- [ ] Add task and workspace compatibility fields.
-- [ ] Add artifact size and precision fields.
-- [ ] Add minimum/recommended device-tier fields.
-- [ ] Add model status: experimental, supported, or recommended.
-- [ ] Add the first tiny development model.
-- [ ] Build catalog filtering and lookup APIs.
+- [x] Define a validated manifest file format.
+- [x] Add schema validation for manifests.
+- [x] Add source repository and pinned revision fields.
+- [x] Add model license fields.
+- [x] Add task and workspace compatibility fields.
+- [x] Add artifact size and precision fields to compatibility reports.
+- [x] Add minimum/recommended device-tier fields.
+- [x] Add model status: experimental, supported, or recommended.
+- [x] Add the first tiny development model.
+- [x] Build catalog filtering and lookup APIs.
 
 ### State management
 
@@ -288,9 +288,9 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Exit criteria
 
-- [ ] Domain schemas are validated at runtime.
+- [x] Model manifest domain schemas are validated at runtime.
 - [ ] Runtime adapters can be swapped without changing workspace components.
-- [ ] A curated model can be resolved entirely from its manifest.
+- [x] A curated model can be resolved entirely from its manifest.
 - [ ] Core architecture has automated contract tests.
 
 ---
@@ -299,41 +299,41 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Capability detection
 
-- [ ] Detect WebGPU availability.
-- [ ] Detect WebAssembly fallback availability.
-- [ ] Capture browser and platform details conservatively.
-- [ ] Request adapter/device only when required.
-- [ ] Detect known runtime-required WebGPU features.
-- [ ] Detect available storage and storage quota.
-- [ ] Detect persistent-storage status.
-- [ ] Detect online/offline state.
-- [ ] Avoid claiming exact available VRAM when the browser cannot expose it.
+- [x] Detect WebGPU availability.
+- [x] Detect WebAssembly fallback availability.
+- [x] Capture browser and platform details conservatively.
+- [x] Request adapter/device only when required.
+- [x] Detect known runtime-required WebGPU features.
+- [x] Detect available storage and storage quota.
+- [x] Detect persistent-storage status.
+- [x] Detect online/offline state.
+- [x] Avoid claiming exact available VRAM when the browser cannot expose it.
 
 ### Device tiers
 
-- [ ] Define Basic, Standard, and Performance device tiers.
-- [ ] Define an Unsupported/Fallback state.
-- [ ] Map static model requirements to tiers.
-- [ ] Add a lightweight runtime probe.
+- [x] Define Basic, Standard, and Performance device tiers.
+- [x] Define an Unsupported/Fallback state.
+- [x] Map static model requirements to tiers.
+- [x] Add a lightweight opt-in runtime initialization probe.
 - [ ] Combine probe results with conservative model estimates.
-- [ ] Explain why a device received its tier.
+- [x] Explain why a device received its tier.
 - [ ] Allow advanced users to override recommendations with a warning.
 
 ### Diagnostics interface
 
-- [ ] Build the diagnostics page.
-- [ ] Show WebGPU status.
-- [ ] Show storage availability and persistence.
-- [ ] Show supported runtime paths.
-- [ ] Show device tier.
-- [ ] Show browser-specific guidance.
+- [x] Build the diagnostics page.
+- [x] Show WebGPU status.
+- [x] Show storage availability and persistence.
+- [x] Show supported runtime paths.
+- [x] Show device tier.
+- [x] Show browser-specific guidance.
 - [ ] Add copyable diagnostic details with no private content.
-- [ ] Add a re-run diagnostics action.
+- [x] Add a re-run diagnostics action.
 
 ### Exit criteria
 
-- [ ] Unsupported users receive clear next steps instead of a broken model load.
-- [ ] Every curated model can be compared with the current device.
+- [x] Unsupported users receive clear next steps instead of a broken model load.
+- [x] Every curated model can be compared with the current device.
 - [ ] Storage and memory statements are clearly labeled as measured or estimated.
 
 ---
@@ -342,14 +342,14 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Persistence layer
 
-- [ ] Define the IndexedDB database and stores.
-- [ ] Add schema migrations.
-- [ ] Store model installation metadata.
+- [x] Define the IndexedDB database and stores.
+- [x] Add schema migrations.
+- [x] Store model installation metadata.
 - [ ] Store application settings.
 - [ ] Store conversations and workspace sessions.
 - [ ] Store benchmark summaries.
-- [ ] Implement transactional writes where state must remain consistent.
-- [ ] Handle corrupted or incompatible persisted data.
+- [x] Implement transactional writes where state must remain consistent.
+- [x] Handle corrupted or incompatible persisted data.
 - [ ] Add a full local-data reset flow.
 
 ### Model artifact storage
@@ -360,7 +360,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [ ] Track expected file sizes.
 - [ ] Track available hashes, ETags, or revision metadata.
 - [ ] Verify all required artifacts before marking a model installed.
-- [ ] Implement deletion.
+- [x] Implement deletion.
 - [ ] Implement installation verification.
 - [ ] Implement installation repair.
 
@@ -372,8 +372,8 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [ ] Implement retry with bounded backoff.
 - [ ] Implement resume where technically supported.
 - [ ] Preserve understandable state after page reload.
-- [ ] Check available storage before starting.
-- [ ] Warn about metered or very large downloads where detectable.
+- [x] Check available storage before starting.
+- [x] Warn about metered or very large downloads where detectable.
 - [ ] Handle offline transitions during download.
 - [ ] Handle server and CORS failures.
 - [ ] Prevent two downloads from writing the same model simultaneously.
@@ -387,7 +387,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [ ] Add retry, cancel, repair, and delete actions.
 - [ ] Confirm destructive deletion.
 - [ ] Explain browser eviction and persistent storage.
-- [ ] Request persistent storage at an appropriate user-driven moment.
+- [x] Request persistent storage at an appropriate user-driven moment.
 
 ### Exit criteria
 
@@ -468,7 +468,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [ ] Show precision and artifact size.
 - [ ] Show source, pinned revision, and license.
 - [ ] Show supported workspaces.
-- [ ] Show installed/offline status.
+- [x] Show installed/offline status.
 - [ ] Add install, load, unload, and delete actions.
 - [ ] Add model detail pages.
 
@@ -536,7 +536,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Offline model behavior
 
-- [~] Detect whether every required model asset is stored.
+- [x] Detect whether every required model asset is stored for the text feasibility model.
 - [ ] Add `available offline`, `partial`, and `online only` states.
 - [x] Prevent silent network fallback during declared offline inference.
 - [x] Launch the application after its origin server becomes unavailable.
@@ -559,7 +559,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 - [~] The installed PWA launches without a network connection.
 - [x] At least one model completes inference fully offline.
-- [ ] Offline status never claims readiness for incomplete assets.
+- [x] Offline status never claims readiness for incomplete assets in the text feasibility model.
 - [ ] Application updates do not silently break installed models.
 
 ---
@@ -568,43 +568,43 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Input parsing and repository inspection
 
-- [ ] Accept `owner/model` identifiers.
-- [ ] Accept canonical Hugging Face model URLs.
-- [ ] Handle URLs containing revisions or file paths intentionally.
-- [ ] Normalize equivalent inputs.
-- [ ] Validate owner and repository-name syntax.
-- [ ] Fetch public model metadata.
-- [ ] Inspect repository files at a pinned revision.
-- [ ] Parse model configuration defensively.
-- [ ] Parse tokenizer and processor metadata defensively.
-- [ ] Never execute arbitrary repository code.
+- [x] Accept `owner/model` identifiers.
+- [x] Accept canonical Hugging Face model URLs.
+- [x] Handle URLs containing revisions or file paths intentionally.
+- [x] Normalize equivalent inputs.
+- [x] Validate owner and repository-name syntax.
+- [x] Fetch public model metadata.
+- [x] Inspect repository files and pin the reported revision.
+- [x] Parse model configuration defensively.
+- [x] Parse tokenizer and processor metadata defensively.
+- [x] Never execute arbitrary repository code.
 
 ### Compatibility rules
 
-- [ ] Create an allowlist of supported architectures.
-- [ ] Map architectures to runtime adapters.
-- [ ] Map model tasks to Emberbench capabilities.
-- [ ] Check for required ONNX graphs.
-- [ ] Check for tokenizer files.
-- [ ] Check for processor and preprocessing files.
-- [ ] Detect available quantizations and dtypes.
-- [ ] Detect unsupported custom code requirements.
+- [x] Create an initial allowlist of supported architectures.
+- [x] Map the initial architecture and tasks to the Transformers.js runtime adapter.
+- [x] Map model tasks to initial Emberbench capabilities.
+- [x] Check for required ONNX graphs.
+- [x] Check for tokenizer files.
+- [x] Check for processor and preprocessing files.
+- [x] Detect available quantizations and dtypes.
+- [x] Detect unsupported custom code requirements.
 - [ ] Detect unsupported operators or known runtime limitations.
-- [ ] Detect gated or private repositories.
-- [ ] Detect incomplete repositories.
+- [x] Detect gated or private repositories.
+- [x] Detect incomplete repositories.
 - [ ] Calculate total required download size.
 - [ ] Estimate device-tier and memory suitability.
-- [ ] Pin the inspected repository revision.
+- [x] Pin the inspected repository revision.
 
 ### Compatibility report
 
-- [ ] Implement `Ready to run`.
-- [ ] Implement `Conversion required`.
-- [ ] Implement `Unsupported`.
-- [ ] Include specific reasons and evidence.
-- [ ] Distinguish errors from genuine incompatibility.
-- [ ] Display required and optional artifacts.
-- [ ] Display compatible precision choices.
+- [x] Implement `Ready to run`.
+- [x] Implement `Conversion required`.
+- [x] Implement `Unsupported`.
+- [x] Include specific reasons and evidence.
+- [x] Distinguish errors from genuine incompatibility.
+- [x] Display recommended artifacts.
+- [x] Display compatible precision choices.
 - [ ] Display storage and device warnings.
 - [ ] Suggest curated alternatives when possible.
 - [ ] Link to source metadata and model license.
@@ -632,8 +632,8 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Exit criteria
 
-- [ ] Public Hugging Face URLs produce deterministic compatibility reports.
-- [ ] Unsupported repositories explain why they cannot run.
+- [x] Public Hugging Face URLs produce deterministic metadata compatibility reports.
+- [x] Unsupported repositories explain why they cannot run at the metadata layer.
 - [ ] Compatible repositories can be installed and run from pinned artifacts.
 - [ ] Repository content is always treated as untrusted data.
 
@@ -1096,4 +1096,12 @@ Ideas belong here until they are accepted into a chronological phase.
 
 ## Current next action
 
-- [ ] Add persistent-storage controls and model-cache completeness details.
+- [x] Implement the first Transformers.js adapter against the common contract.
+- [x] Migrate Text Model Lab to consume the shared runtime adapter.
+- [x] Add persistent installed-model records and lifecycle state.
+- [x] Surface installed-model state in the curated model library.
+- [x] Add runtime capability discovery and device-tier recommendations.
+- [x] Add model deletion with cache and metadata cleanup for the text runtime.
+- [x] Add equivalent cache lifecycle support to the vision runtime adapter.
+- [x] Add storage preflight checks before model downloads.
+- [ ] Add model-installation repair and stale-record reconciliation.

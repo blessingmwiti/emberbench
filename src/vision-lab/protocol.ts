@@ -1,9 +1,16 @@
 export const VISION_SPIKE_MODEL = 'Xenova/vit-gpt2-image-captioning';
 
+export interface VisionWorkerConfig {
+  dtype?: 'fp16' | 'fp32' | 'q4' | 'q4f16' | 'q8';
+  modelId?: string;
+  revision?: string;
+}
+
 export type VisionWorkerRequest =
-  | {
+  | (VisionWorkerConfig & {
+      cachedFilesOnly?: boolean;
       type: 'load';
-    }
+    })
   | {
       image: Blob;
       requestId: string;
@@ -11,7 +18,13 @@ export type VisionWorkerRequest =
     }
   | {
       type: 'unload';
-    };
+    }
+  | (VisionWorkerConfig & {
+      type: 'inspect-cache';
+    })
+  | (VisionWorkerConfig & {
+      type: 'delete-cache';
+    });
 
 export type VisionWorkerEvent =
   | {
@@ -36,4 +49,14 @@ export type VisionWorkerEvent =
     }
   | {
       type: 'unloaded';
+    }
+  | {
+      cached: boolean;
+      files: Array<{ cached: boolean; file: string }>;
+      type: 'cache-status';
+    }
+  | {
+      filesCached: number;
+      filesDeleted: number;
+      type: 'cache-deleted';
     };

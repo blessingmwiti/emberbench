@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { formatBytes } from '../diagnostics/format';
-import { runDeviceDiagnostics } from '../diagnostics/run-device-diagnostics';
+import {
+  requestPersistentStorage,
+  runDeviceDiagnostics,
+} from '../diagnostics/run-device-diagnostics';
 import type { DeviceDiagnostic, DiagnosticStatus } from '../diagnostics/types';
+import { recommendDeviceTier } from '../diagnostics/recommend-device-tier';
+import { ModelImporter } from '../models/importer/ModelImporter';
+import { ModelLibrary } from '../models/catalog/ModelLibrary';
 import { TextModelLab } from '../model-lab/TextModelLab';
 import { PwaStatus } from '../pwa/PwaStatus';
 import { VisionModelLab } from '../vision-lab/VisionModelLab';
@@ -32,6 +38,8 @@ function StatusMark({ status }: { status: DiagnosticStatus }) {
 export function App() {
   const [diagnostic, setDiagnostic] = useState<DeviceDiagnostic | null>(null);
   const [status, setStatus] = useState<DiagnosticStatus>('idle');
+  const [persistenceMessage, setPersistenceMessage] = useState<string | null>(null);
+  const [requestingPersistence, setRequestingPersistence] = useState(false);
 
   const runDiagnostics = useCallback(async () => {
     setStatus('running');
@@ -49,6 +57,27 @@ export function App() {
     void runDiagnostics();
   }, [runDiagnostics]);
 
+  const persistStorage = useCallback(async () => {
+    setRequestingPersistence(true);
+    setPersistenceMessage(null);
+
+    try {
+      const granted = await requestPersistentStorage();
+      setPersistenceMessage(
+        granted === null
+          ? 'This browser does not expose persistent storage controls.'
+          : granted
+            ? 'Persistent storage is granted. The browser is less likely to evict model files.'
+            : 'The browser did not grant persistence. Cached models may be evicted under storage pressure.',
+      );
+      await runDiagnostics();
+    } catch {
+      setPersistenceMessage('The persistent storage request could not be completed.');
+    } finally {
+      setRequestingPersistence(false);
+    }
+  }, [runDiagnostics]);
+
   const statusCopy =
     status === 'running'
       ? 'Checking this browser…'
@@ -59,6 +88,7 @@ export function App() {
           : status === 'error'
             ? 'Diagnostics need attention'
             : 'Not checked yet';
+  const deviceRecommendation = recommendDeviceTier(diagnostic);
 
   return (
     <div className="app-shell">
@@ -71,9 +101,11 @@ export function App() {
         </a>
         <nav aria-label="Primary navigation">
           <a href="#workspaces">Workspaces</a>
+          <a href="#models">Models</a>
           <a href="#diagnostics">Device</a>
           <a href="#model-lab">Model Lab</a>
           <a href="#vision-lab">Vision</a>
+          <a href="#model-importer">Import</a>
           <a href="#roadmap">Roadmap</a>
         </nav>
         <PwaStatus />
@@ -134,6 +166,8 @@ export function App() {
           </div>
         </section>
 
+        <ModelLibrary diagnostic={diagnostic} />
+
         <section className="section diagnostics-section" id="diagnostics">
           <div className="diagnostic-copy">
             <p className="kicker">FIRST FEASIBILITY SLICE</p>
@@ -151,6 +185,21 @@ export function App() {
             >
               {status === 'running' ? 'Running checks…' : 'Run diagnostics again'}
             </button>
+            {diagnostic?.storage.available && !diagnostic.storage.persisted ? (
+              <button
+                className="button button--quiet"
+                disabled={requestingPersistence}
+                onClick={() => void persistStorage()}
+                type="button"
+              >
+                {requestingPersistence ? 'Requesting…' : 'Protect cached models'}
+              </button>
+            ) : null}
+            {persistenceMessage ? (
+              <p className="storage-message" role="status">
+                {persistenceMessage}
+              </p>
+            ) : null}
           </div>
 
           <div className="diagnostic-panel" aria-live="polite">
@@ -187,6 +236,36 @@ export function App() {
                 <dd>{diagnostic ? diagnostic.webGpu.featureCount : 'Checking…'}</dd>
               </div>
               <div>
+                <dt>FP16 shaders</dt>
+                <dd>
+                  {diagnostic
+                    ? diagnostic.webGpu.features.includes('shader-f16')
+                      ? 'Available'
+                      : 'Not exposed'
+                    : 'Checking…'}
+                </dd>
+              </div>
+              <div>
+                <dt>Device tier</dt>
+                <dd>{deviceRecommendation ? deviceRecommendation.tier : 'Checking…'}</dd>
+              </div>
+              <div>
+                <dt>Runtime paths</dt>
+                <dd>
+                  {diagnostic
+                    ? diagnostic.runtime.supportedPaths.join(', ') || 'None'
+                    : 'Checking…'}
+                </dd>
+              </div>
+              <div>
+                <dt>Browser</dt>
+                <dd>{diagnostic?.browser.browser ?? 'Checking…'}</dd>
+              </div>
+              <div>
+                <dt>Platform</dt>
+                <dd>{diagnostic?.browser.platform ?? 'Checking…'}</dd>
+              </div>
+              <div>
                 <dt>Storage used</dt>
                 <dd>{formatBytes(diagnostic?.storage.usageBytes ?? null)}</dd>
               </div>
@@ -209,12 +288,26 @@ export function App() {
             {diagnostic?.webGpu.error ? (
               <p className="diagnostic-error">{diagnostic.webGpu.error}</p>
             ) : null}
+            {deviceRecommendation ? (
+              <p className="diagnostic-recommendation">
+                <strong>{deviceRecommendation.tier} tier.</strong> {deviceRecommendation.reason}
+                {' Exact usable GPU memory is not exposed or estimated.'}
+              </p>
+            ) : null}
+            {deviceRecommendation?.tier === 'unsupported' ? (
+              <p className="diagnostic-guidance">
+                Try an up-to-date browser with WebGPU enabled, current graphics drivers, and a
+                secure HTTPS or localhost origin.
+              </p>
+            ) : null}
           </div>
         </section>
 
         <TextModelLab />
 
         <VisionModelLab />
+
+        <ModelImporter />
 
         <section className="section roadmap-section" id="roadmap">
           <p className="kicker">BUILD ORDER</p>

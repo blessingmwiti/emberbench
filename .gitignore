@@ -26,8 +26,8 @@ test-results/
 *.swo
 
 # Locally downloaded model artifacts
-models/
-model-cache/
+/models/
+/model-cache/
 *.onnx
 *.safetensors
 *.gguf

@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 
-import {
-  TEXT_SPIKE_MODEL,
-  type TextModelWorkerEvent,
-  type TextModelWorkerRequest,
-} from './protocol';
+import { formatBytes } from '../diagnostics/format';
+import { findCuratedModel } from '../models/catalog/registry';
+import type { InstalledModel, InstalledModelStatus } from '../models/catalog/types';
+import { createInstalledModel, transitionInstalledModel } from '../models/installed-model';
+import { INSTALLED_MODELS_CHANGED_EVENT, installedModels } from '../storage/database';
+import { runDownloadPreflight } from '../storage/download-preflight';
+import type { RuntimeCacheStatus, RuntimeEvent } from '../runtimes/core/types';
+import { RuntimeError } from '../runtimes/core/errors';
+import { TransformersTextWorkerAdapter } from '../runtimes/transformers/text-worker-adapter';
 
 type LabStatus = 'idle' | 'loading' | 'ready' | 'generating' | 'cancelling' | 'error';
 
@@ -15,6 +19,13 @@ interface Metrics {
 }
 
 const initialPrompt = 'Once upon a time, a tiny ember learned how to';
+const curatedTextModel = findCuratedModel('smollm2-135m-q4');
+
+if (!curatedTextModel) {
+  throw new Error('The curated Text Model Lab model is missing.');
+}
+
+const textModel = curatedTextModel;
 
 function formatDuration(milliseconds: number | null) {
   if (milliseconds === null) {
@@ -26,13 +37,14 @@ function formatDuration(milliseconds: number | null) {
     : `${milliseconds.toFixed(0)} ms`;
 }
 
-function readProgress(data: Record<string, unknown>) {
-  return typeof data.progress === 'number' ? data.progress : null;
+function displayRuntimeError(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
 }
 
 export function TextModelLab() {
-  const workerRef = useRef<Worker | null>(null);
+  const adapterRef = useRef<TransformersTextWorkerAdapter | null>(null);
   const activeRequestRef = useRef<string | null>(null);
+  const mountedRef = useRef(true);
   const [status, setStatus] = useState<LabStatus>('idle');
   const [prompt, setPrompt] = useState(initialPrompt);
   const [output, setOutput] = useState('');
@@ -40,102 +52,183 @@ export function TextModelLab() {
   const [loadTimeMs, setLoadTimeMs] = useState<number | null>(null);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [cached, setCached] = useState<boolean | null>(null);
+  const [cacheStatus, setCacheStatus] = useState<RuntimeCacheStatus>({
+    cached: false,
+    files: [],
+  });
+  const [cacheInspected, setCacheInspected] = useState(false);
   const [cachedFilesOnly, setCachedFilesOnly] = useState(false);
+  const [installRecord, setInstallRecord] = useState<InstalledModel | null>(null);
+  const [storageMessage, setStorageMessage] = useState<string | null>(null);
+  const [downloadWarning, setDownloadWarning] = useState<string | null>(null);
 
-  useEffect(
-    () => () => {
-      workerRef.current?.terminate();
-    },
-    [],
-  );
+  useEffect(() => {
+    mountedRef.current = true;
+    const refreshInstallRecord = () => {
+      void installedModels
+        .get(textModel.id)
+        .then((record) => {
+          if (mountedRef.current) {
+            setInstallRecord(record);
+          }
+        })
+        .catch(() => {
+          if (mountedRef.current) {
+            setStorageMessage('Installed-model metadata is unavailable in this browser.');
+          }
+        });
+    };
 
-  function ensureWorker() {
-    if (workerRef.current) {
-      return workerRef.current;
+    refreshInstallRecord();
+    window.addEventListener(INSTALLED_MODELS_CHANGED_EVENT, refreshInstallRecord);
+    return () => {
+      mountedRef.current = false;
+      window.removeEventListener(INSTALLED_MODELS_CHANGED_EVENT, refreshInstallRecord);
+      adapterRef.current?.terminate();
+    };
+  }, []);
+
+  function ensureAdapter() {
+    adapterRef.current ??= new TransformersTextWorkerAdapter();
+    return adapterRef.current;
+  }
+
+  async function inspectCache() {
+    try {
+      await readCacheStatus();
+    } catch (inspectionError) {
+      if (mountedRef.current) {
+        setError(displayRuntimeError(inspectionError, 'Model cache inspection failed.'));
+      }
+    }
+  }
+
+  async function readCacheStatus() {
+    const nextStatus = await ensureAdapter().inspectCache(textModel);
+    if (mountedRef.current) {
+      setCacheStatus(nextStatus);
+      setCacheInspected(true);
+    }
+    return nextStatus;
+  }
+
+  async function persistInstallRecord(record: InstalledModel) {
+    if (mountedRef.current) {
+      setInstallRecord(record);
+    }
+    try {
+      await installedModels.put(record);
+      if (mountedRef.current) {
+        setStorageMessage(null);
+      }
+    } catch {
+      if (mountedRef.current) {
+        setStorageMessage('The model works, but its installation metadata could not be saved.');
+      }
+    }
+  }
+
+  function beginInstallRecord(existing: InstalledModel | null, status: InstalledModelStatus) {
+    if (!existing || existing.sourceRevision !== textModel.source.revision) {
+      return createInstalledModel(textModel, status);
+    }
+    try {
+      return transitionInstalledModel(existing, status);
+    } catch {
+      return createInstalledModel(textModel, status);
+    }
+  }
+
+  async function loadModel(preflightApproved = false) {
+    if (!cachedFilesOnly && !preflightApproved) {
+      const preflight = await runDownloadPreflight(textModel);
+      const detail = `${preflight.message} Estimated need: ${formatBytes(preflight.requiredBytes)}${
+        preflight.availableBytes === null
+          ? ''
+          : `; available: ${formatBytes(preflight.availableBytes)}`
+      }.`;
+      if (preflight.status === 'blocked') {
+        setError(detail);
+        return;
+      }
+      if (preflight.status === 'warning') {
+        setDownloadWarning(detail);
+        return;
+      }
+      if (preflight.status === 'unknown') {
+        setStorageMessage(detail);
+      }
     }
 
-    const worker = new Worker(new URL('./text-generation.worker.ts', import.meta.url), {
-      type: 'module',
-    });
-
-    worker.addEventListener('message', (event: MessageEvent<TextModelWorkerEvent>) => {
-      const message = event.data;
-
-      switch (message.type) {
-        case 'cache-status':
-          setCached(message.cached);
-          break;
-        case 'progress': {
-          const nextProgress = readProgress(message.data);
-          if (nextProgress !== null) {
-            setProgress(nextProgress);
-          }
-          break;
-        }
-        case 'ready':
-          setLoadTimeMs((current) => (message.loadTimeMs > 0 ? message.loadTimeMs : current));
-          setProgress(100);
-          setStatus((current) => (current === 'loading' ? 'ready' : current));
-          break;
-        case 'token':
-          if (message.requestId === activeRequestRef.current) {
-            setOutput((current) => current + message.text);
-          }
-          break;
-        case 'complete':
-          if (message.requestId === activeRequestRef.current) {
-            setMetrics(message);
-            activeRequestRef.current = null;
-            setStatus('ready');
-          }
-          break;
-        case 'cancelled':
-          if (message.requestId === activeRequestRef.current) {
-            activeRequestRef.current = null;
-            setStatus('ready');
-          }
-          break;
-        case 'error':
-          if (!message.requestId || message.requestId === activeRequestRef.current) {
-            activeRequestRef.current = null;
-            setError(message.message);
-            setStatus('error');
-          }
-          break;
-        case 'unloaded':
-          activeRequestRef.current = null;
-          setLoadTimeMs(null);
-          setMetrics(null);
-          setOutput('');
-          setProgress(null);
-          setStatus('idle');
-          break;
-      }
-    });
-
-    worker.addEventListener('error', () => {
-      activeRequestRef.current = null;
-      setError('The model worker stopped unexpectedly.');
-      setStatus('error');
-    });
-
-    workerRef.current = worker;
-    return worker;
-  }
-
-  function post(request: TextModelWorkerRequest) {
-    ensureWorker().postMessage(request);
-  }
-
-  function loadModel() {
+    setDownloadWarning(null);
+    const adapter = ensureAdapter();
+    const startedAt = performance.now();
+    let record = beginInstallRecord(
+      await installedModels.get(textModel.id).catch(() => installRecord),
+      cachedFilesOnly ? 'verifying' : 'downloading',
+    );
+    await persistInstallRecord(record);
     setError(null);
     setProgress(0);
     setStatus('loading');
-    post({ cachedFilesOnly, type: 'load' });
+
+    try {
+      if (!cachedFilesOnly) {
+        for await (const event of adapter.download(textModel)) {
+          if (event.type === 'progress' && mountedRef.current) {
+            setProgress(event.progress * 100);
+          }
+        }
+        record = transitionInstalledModel(record, 'verifying');
+        await persistInstallRecord(record);
+      }
+
+      await adapter.load(textModel, { cachedFilesOnly });
+      if (!mountedRef.current) {
+        return;
+      }
+      setLoadTimeMs(performance.now() - startedAt);
+      setProgress(100);
+      setStatus('ready');
+      try {
+        const verifiedCache = await readCacheStatus();
+        const cachedFiles = verifiedCache.files.filter((file) => file.cached).length;
+        record = transitionInstalledModel(record, verifiedCache.cached ? 'installed' : 'failed', {
+          cachedFiles,
+          lastError: verifiedCache.cached
+            ? undefined
+            : 'Cache verification found missing model files.',
+          totalFiles: verifiedCache.files.length,
+        });
+        await persistInstallRecord(record);
+      } catch (verificationError) {
+        record = transitionInstalledModel(record, 'failed', {
+          lastError: displayRuntimeError(verificationError, 'Model cache verification failed.'),
+        });
+        await persistInstallRecord(record);
+        if (mountedRef.current) {
+          setStorageMessage(
+            'The model loaded, but its offline installation could not be verified.',
+          );
+        }
+      }
+    } catch (loadError) {
+      try {
+        record = transitionInstalledModel(record, 'failed', {
+          lastError: displayRuntimeError(loadError, 'Model loading failed.'),
+        });
+        await persistInstallRecord(record);
+      } catch {
+        // The visible runtime error remains the authoritative failure signal.
+      }
+      if (mountedRef.current) {
+        setError(displayRuntimeError(loadError, 'Model loading failed.'));
+        setStatus('error');
+      }
+    }
   }
 
-  function generate() {
+  async function generate() {
     const normalizedPrompt = prompt.trim();
     if (!normalizedPrompt) {
       setError('Enter a prompt before generating.');
@@ -148,21 +241,70 @@ export function TextModelLab() {
     setMetrics(null);
     setOutput('');
     setStatus('generating');
-    post({
-      maxNewTokens: 64,
-      prompt: normalizedPrompt,
-      requestId,
-      type: 'generate',
-    });
+
+    try {
+      for await (const event of ensureAdapter().run(
+        { kind: 'text', text: normalizedPrompt },
+        { maxNewTokens: 64, requestId },
+      )) {
+        if (!mountedRef.current || requestId !== activeRequestRef.current) {
+          continue;
+        }
+        handleRunEvent(event);
+      }
+      if (mountedRef.current && requestId === activeRequestRef.current) {
+        activeRequestRef.current = null;
+        setStatus('ready');
+      }
+    } catch (generationError) {
+      if (!mountedRef.current || requestId !== activeRequestRef.current) {
+        return;
+      }
+      activeRequestRef.current = null;
+      if (generationError instanceof RuntimeError && generationError.code === 'ABORTED') {
+        setStatus('ready');
+      } else {
+        setError(displayRuntimeError(generationError, 'Text generation failed.'));
+        setStatus('error');
+      }
+    }
   }
 
-  function cancel() {
+  function handleRunEvent(event: RuntimeEvent) {
+    if (event.type === 'token') {
+      setOutput((current) => current + event.text);
+    }
+    if (event.type === 'complete') {
+      setMetrics({
+        durationMs: event.durationMs,
+        firstTokenMs: event.firstTokenMs ?? null,
+        tokenCount: event.tokenCount ?? 0,
+      });
+    }
+  }
+
+  async function cancel() {
     setStatus('cancelling');
-    post({ type: 'cancel' });
+    await ensureAdapter().abort(activeRequestRef.current ?? undefined);
   }
 
-  function unload() {
-    post({ type: 'unload' });
+  async function unload() {
+    try {
+      await ensureAdapter().unload();
+      if (mountedRef.current) {
+        activeRequestRef.current = null;
+        setLoadTimeMs(null);
+        setMetrics(null);
+        setOutput('');
+        setProgress(null);
+        setStatus('idle');
+      }
+    } catch (unloadError) {
+      if (mountedRef.current) {
+        setError(displayRuntimeError(unloadError, 'Model unloading failed.'));
+        setStatus('error');
+      }
+    }
   }
 
   const busy = status === 'loading' || status === 'generating' || status === 'cancelling';
@@ -185,7 +327,7 @@ export function TextModelLab() {
       <div className="model-lab-grid">
         <div className="model-console">
           <div className="model-console__bar">
-            <span>{TEXT_SPIKE_MODEL}</span>
+            <span>{textModel.source.modelId}</span>
             <span className={`model-state model-state--${status}`}>{status}</span>
           </div>
 
@@ -200,7 +342,11 @@ export function TextModelLab() {
 
           <div className="model-actions">
             {!modelReady && status !== 'loading' ? (
-              <button className="button button--primary" onClick={loadModel} type="button">
+              <button
+                className="button button--primary"
+                onClick={() => void loadModel()}
+                type="button"
+              >
                 Download and load model
               </button>
             ) : null}
@@ -210,7 +356,11 @@ export function TextModelLab() {
               </button>
             ) : null}
             {status === 'ready' ? (
-              <button className="button button--primary" onClick={generate} type="button">
+              <button
+                className="button button--primary"
+                onClick={() => void generate()}
+                type="button"
+              >
                 Generate 64 tokens
               </button>
             ) : null}
@@ -218,18 +368,40 @@ export function TextModelLab() {
               <button
                 className="button button--danger"
                 disabled={status === 'cancelling'}
-                onClick={cancel}
+                onClick={() => void cancel()}
                 type="button"
               >
                 {status === 'cancelling' ? 'Stopping…' : 'Stop generation'}
               </button>
             ) : null}
             {modelReady && status === 'ready' ? (
-              <button className="button button--quiet" onClick={unload} type="button">
+              <button className="button button--quiet" onClick={() => void unload()} type="button">
                 Unload model
               </button>
             ) : null}
           </div>
+
+          {downloadWarning ? (
+            <div className="download-warning" role="alert">
+              <p>{downloadWarning}</p>
+              <div>
+                <button
+                  className="button button--primary"
+                  onClick={() => void loadModel(true)}
+                  type="button"
+                >
+                  Continue download
+                </button>
+                <button
+                  className="button button--quiet"
+                  onClick={() => setDownloadWarning(null)}
+                  type="button"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : null}
 
           <label className="local-only-control">
             <input
@@ -243,6 +415,15 @@ export function TextModelLab() {
               <small>Blocks runtime requests for missing Hugging Face model files.</small>
             </span>
           </label>
+
+          <button
+            className="cache-inspect-button"
+            disabled={busy}
+            onClick={() => void inspectCache()}
+            type="button"
+          >
+            Inspect cached model files
+          </button>
 
           {status === 'loading' ? (
             <div
@@ -288,17 +469,33 @@ export function TextModelLab() {
               <dd>WebGPU worker</dd>
             </div>
             <div>
-              <dt>Model files</dt>
+              <dt>Offline cache</dt>
               <dd>
-                {cached === null ? 'Not checked' : cached ? 'Fully cached' : 'Download required'}
+                {!cacheInspected
+                  ? 'Not inspected'
+                  : cacheStatus.cached
+                    ? `${cacheStatus.files.length}/${cacheStatus.files.length} files`
+                    : `${cacheStatus.files.filter((file) => file.cached).length}/${cacheStatus.files.length} files`}
               </dd>
             </div>
             <div>
-              <dt>Load policy</dt>
-              <dd>{cachedFilesOnly ? 'Browser cache only' : 'Cache + network'}</dd>
+              <dt>Install record</dt>
+              <dd>{installRecord?.status ?? 'Not recorded'}</dd>
             </div>
           </dl>
-          <p>These are measurements from this browser session, not universal performance claims.</p>
+
+          {storageMessage ? <p className="storage-message">{storageMessage}</p> : null}
+
+          {cacheStatus.files.length > 0 ? (
+            <ul className="cache-file-list">
+              {cacheStatus.files.map((file) => (
+                <li key={file.file}>
+                  <span>{file.cached ? 'Cached' : 'Missing'}</span>
+                  <code>{file.file}</code>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </aside>
       </div>
     </section>

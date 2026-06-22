@@ -35,6 +35,8 @@ This is a living record of browser, device, model, storage, and offline feasibil
 
 These values are observations from one environment, not minimum requirements.
 
+The browser accepted a user-triggered persistent-storage request but did not grant it. Emberbench therefore keeps the eviction warning visible instead of treating the request itself as success.
+
 ## Text-generation spike
 
 ### Configuration
@@ -93,6 +95,10 @@ The origin preview server was then stopped completely. Emberbench reloaded succe
 
 No browser warnings or errors were observed. `navigator.onLine` remained true because the browser still had general internet connectivity; the stronger test conditions were that the application origin was unavailable and the model worker rejected Hugging Face access.
 
+### Cache completeness inspection
+
+Transformers.js identified six required files for the SmolLM2 Q4 WebGPU pipeline. All six were present in browser cache. Emberbench now exposes the per-file result and does not infer offline readiness from the presence of only one model file.
+
 ## Vision spike
 
 ### Configuration
@@ -130,6 +136,28 @@ The caption is imperfect but recognizes the primary visual subject. Image prepro
 - Reports online, secure-context, storage quota, usage, and persistence state.
 - Does not claim to know exact usable GPU memory.
 
+## Hugging Face inspection spike
+
+The first public-repository inspector now:
+
+- Accepts strict `owner/model` identifiers and canonical Hugging Face URLs.
+- Rejects non-Hugging-Face hosts and malformed identifiers before fetching.
+- Fetches public model metadata with blob sizes.
+- Pins the inspected repository commit SHA.
+- Counts configuration, tokenizer, processor, ONNX, and reduced-precision artifacts.
+- Detects gated, private, disabled, and custom-code model metadata.
+- Produces `Ready to run`, `Conversion required`, or `Unsupported`.
+
+Live browser checks classified:
+
+- `onnx-community/SmolLM2-135M-ONNX` as ready to run.
+- `Qwen/Qwen2.5-Coder-1.5B-Instruct` as conversion required because the source repository lacks ONNX artifacts.
+- A non-Hugging-Face URL as invalid without making a repository request.
+
+The inspector recommends a reduced-precision graph and includes matching external-data sidecars in its size estimate. For SmolLM2 Q4 this is approximately 173.7 MB rather than the misleading 268 KB graph-header size alone.
+
+An explicit runtime probe then downloaded the pinned SmolLM2 revision, initialized it through WebGPU in a disposable worker, released the model, and reported success in 46.38 seconds.
+
 ## Open feasibility risks
 
 - WebGPU device loss during active inference
@@ -142,4 +170,4 @@ The caption is imperfect but recognizes the primary visual subject. Image prepro
 
 ## Next experiment
 
-Add persistent-storage controls and inspect browser-cache file completeness in the model manager.
+Add model-installation repair and stale-record reconciliation.

@@ -1,27 +1,39 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { VISION_SPIKE_MODEL, type VisionWorkerEvent, type VisionWorkerRequest } from './protocol';
+import { formatBytes } from '../diagnostics/format';
+import { findCuratedModel } from '../models/catalog/registry';
+import type { InstalledModel, InstalledModelStatus } from '../models/catalog/types';
+import { createInstalledModel, transitionInstalledModel } from '../models/installed-model';
+import { RuntimeError } from '../runtimes/core/errors';
+import type { RuntimeCacheStatus, RuntimeEvent } from '../runtimes/core/types';
+import { TransformersVisionWorkerAdapter } from '../runtimes/transformers/vision-worker-adapter';
+import { INSTALLED_MODELS_CHANGED_EVENT, installedModels } from '../storage/database';
+import { runDownloadPreflight } from '../storage/download-preflight';
 
-type VisionStatus = 'idle' | 'loading' | 'ready' | 'running' | 'error';
+type VisionStatus = 'idle' | 'loading' | 'ready' | 'running' | 'cancelling' | 'error';
+
+const curatedVisionModel = findCuratedModel('vit-gpt2-captioning-q8');
+if (!curatedVisionModel) {
+  throw new Error('The curated Vision Model Lab model is missing.');
+}
+const visionModel = curatedVisionModel;
 
 function formatDuration(milliseconds: number | null) {
-  if (milliseconds === null) {
-    return '—';
-  }
-
+  if (milliseconds === null) return '—';
   return milliseconds >= 1000
     ? `${(milliseconds / 1000).toFixed(2)} s`
     : `${milliseconds.toFixed(0)} ms`;
 }
 
-function readProgress(data: Record<string, unknown>) {
-  return typeof data.progress === 'number' ? data.progress : null;
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
 }
 
 export function VisionModelLab() {
-  const workerRef = useRef<Worker | null>(null);
+  const adapterRef = useRef<TransformersVisionWorkerAdapter | null>(null);
   const requestRef = useRef<string | null>(null);
   const previewUrlRef = useRef<string | null>(null);
+  const mountedRef = useRef(true);
   const [status, setStatus] = useState<VisionStatus>('idle');
   const [progress, setProgress] = useState<number | null>(null);
   const [loadTimeMs, setLoadTimeMs] = useState<number | null>(null);
@@ -30,21 +42,48 @@ export function VisionModelLab() {
   const [error, setError] = useState<string | null>(null);
   const [image, setImage] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [cachedFilesOnly, setCachedFilesOnly] = useState(false);
+  const [cacheStatus, setCacheStatus] = useState<RuntimeCacheStatus>({
+    cached: false,
+    files: [],
+  });
+  const [cacheInspected, setCacheInspected] = useState(false);
+  const [installRecord, setInstallRecord] = useState<InstalledModel | null>(null);
+  const [storageMessage, setStorageMessage] = useState<string | null>(null);
+  const [downloadWarning, setDownloadWarning] = useState<string | null>(null);
 
-  useEffect(
-    () => () => {
-      workerRef.current?.terminate();
-      if (previewUrlRef.current) {
-        URL.revokeObjectURL(previewUrlRef.current);
-      }
-    },
-    [],
-  );
+  useEffect(() => {
+    mountedRef.current = true;
+    const refreshInstallRecord = () => {
+      void installedModels
+        .get(visionModel.id)
+        .then((record) => {
+          if (mountedRef.current) setInstallRecord(record);
+        })
+        .catch(() => {
+          if (mountedRef.current) {
+            setStorageMessage('Vision installation metadata is unavailable in this browser.');
+          }
+        });
+    };
+
+    refreshInstallRecord();
+    window.addEventListener(INSTALLED_MODELS_CHANGED_EVENT, refreshInstallRecord);
+    return () => {
+      mountedRef.current = false;
+      window.removeEventListener(INSTALLED_MODELS_CHANGED_EVENT, refreshInstallRecord);
+      adapterRef.current?.terminate();
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    };
+  }, []);
+
+  function ensureAdapter() {
+    adapterRef.current ??= new TransformersVisionWorkerAdapter();
+    return adapterRef.current;
+  }
 
   function setPreview(blob: Blob) {
-    if (previewUrlRef.current) {
-      URL.revokeObjectURL(previewUrlRef.current);
-    }
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
     const nextUrl = URL.createObjectURL(blob);
     previewUrlRef.current = nextUrl;
     setPreviewUrl(nextUrl);
@@ -53,76 +92,127 @@ export function VisionModelLab() {
     setDurationMs(null);
   }
 
-  function ensureWorker() {
-    if (workerRef.current) {
-      return workerRef.current;
+  async function persistRecord(record: InstalledModel) {
+    if (mountedRef.current) setInstallRecord(record);
+    try {
+      await installedModels.put(record);
+      if (mountedRef.current) setStorageMessage(null);
+    } catch {
+      if (mountedRef.current) {
+        setStorageMessage('The vision model works, but its install record could not be saved.');
+      }
+    }
+  }
+
+  function beginRecord(existing: InstalledModel | null, nextStatus: InstalledModelStatus) {
+    if (!existing || existing.sourceRevision !== visionModel.source.revision) {
+      return createInstalledModel(visionModel, nextStatus);
+    }
+    try {
+      return transitionInstalledModel(existing, nextStatus);
+    } catch {
+      return createInstalledModel(visionModel, nextStatus);
+    }
+  }
+
+  async function readCacheStatus() {
+    const next = await ensureAdapter().inspectCache(visionModel);
+    if (mountedRef.current) {
+      setCacheStatus(next);
+      setCacheInspected(true);
+    }
+    return next;
+  }
+
+  async function inspectCache() {
+    try {
+      await readCacheStatus();
+    } catch (inspectionError) {
+      if (mountedRef.current) {
+        setError(errorMessage(inspectionError, 'Vision cache inspection failed.'));
+      }
+    }
+  }
+
+  async function loadModel(preflightApproved = false) {
+    if (!cachedFilesOnly && !preflightApproved) {
+      const preflight = await runDownloadPreflight(visionModel);
+      const detail = `${preflight.message} Estimated need: ${formatBytes(preflight.requiredBytes)}${
+        preflight.availableBytes === null
+          ? ''
+          : `; available: ${formatBytes(preflight.availableBytes)}`
+      }.`;
+      if (preflight.status === 'blocked') {
+        setError(detail);
+        return;
+      }
+      if (preflight.status === 'warning') {
+        setDownloadWarning(detail);
+        return;
+      }
+      if (preflight.status === 'unknown') {
+        setStorageMessage(detail);
+      }
     }
 
-    const worker = new Worker(new URL('./image-caption.worker.ts', import.meta.url), {
-      type: 'module',
-    });
-
-    worker.addEventListener('message', (event: MessageEvent<VisionWorkerEvent>) => {
-      const message = event.data;
-
-      switch (message.type) {
-        case 'progress': {
-          const nextProgress = readProgress(message.data);
-          if (nextProgress !== null) {
-            setProgress(nextProgress);
-          }
-          break;
-        }
-        case 'ready':
-          setLoadTimeMs((current) => (message.loadTimeMs > 0 ? message.loadTimeMs : current));
-          setProgress(100);
-          setStatus((current) => (current === 'loading' ? 'ready' : current));
-          break;
-        case 'result':
-          if (message.requestId === requestRef.current) {
-            requestRef.current = null;
-            setCaption(message.caption);
-            setDurationMs(message.durationMs);
-            setStatus('ready');
-          }
-          break;
-        case 'error':
-          if (!message.requestId || message.requestId === requestRef.current) {
-            requestRef.current = null;
-            setError(message.message);
-            setStatus('error');
-          }
-          break;
-        case 'unloaded':
-          requestRef.current = null;
-          setLoadTimeMs(null);
-          setDurationMs(null);
-          setCaption('');
-          setProgress(null);
-          setStatus('idle');
-          break;
-      }
-    });
-
-    worker.addEventListener('error', () => {
-      requestRef.current = null;
-      setError('The vision worker stopped unexpectedly.');
-      setStatus('error');
-    });
-
-    workerRef.current = worker;
-    return worker;
-  }
-
-  function post(request: VisionWorkerRequest) {
-    ensureWorker().postMessage(request);
-  }
-
-  function loadModel() {
+    setDownloadWarning(null);
+    const adapter = ensureAdapter();
+    const startedAt = performance.now();
+    let record = beginRecord(
+      await installedModels.get(visionModel.id).catch(() => installRecord),
+      cachedFilesOnly ? 'verifying' : 'downloading',
+    );
+    await persistRecord(record);
     setError(null);
     setProgress(0);
     setStatus('loading');
-    post({ type: 'load' });
+
+    try {
+      if (!cachedFilesOnly) {
+        for await (const event of adapter.download(visionModel)) {
+          if (event.type === 'progress' && mountedRef.current) {
+            setProgress(event.progress * 100);
+          }
+        }
+        record = transitionInstalledModel(record, 'verifying');
+        await persistRecord(record);
+      }
+
+      await adapter.load(visionModel, { cachedFilesOnly });
+      if (!mountedRef.current) return;
+      setLoadTimeMs(performance.now() - startedAt);
+      setProgress(100);
+      setStatus('ready');
+
+      try {
+        const verified = await readCacheStatus();
+        const cachedFiles = verified.files.filter((file) => file.cached).length;
+        record = transitionInstalledModel(record, verified.cached ? 'installed' : 'failed', {
+          cachedFiles,
+          lastError: verified.cached ? undefined : 'Vision cache verification found missing files.',
+          totalFiles: verified.files.length,
+        });
+        await persistRecord(record);
+      } catch (verificationError) {
+        record = transitionInstalledModel(record, 'failed', {
+          lastError: errorMessage(verificationError, 'Vision cache verification failed.'),
+        });
+        await persistRecord(record);
+      }
+    } catch (loadError) {
+      try {
+        record = transitionInstalledModel(record, 'failed', {
+          lastError: errorMessage(loadError, 'Vision model loading failed.'),
+        });
+        await persistRecord(record);
+      } catch {
+        // The visible runtime error remains the authoritative failure signal.
+      }
+      if (mountedRef.current) {
+        setError(errorMessage(loadError, 'Vision model loading failed.'));
+        setStatus('error');
+      }
+    }
   }
 
   async function useSample() {
@@ -130,7 +220,6 @@ export function VisionModelLab() {
     canvas.width = 640;
     canvas.height = 420;
     const context = canvas.getContext('2d');
-
     if (!context) {
       setError('This browser could not create the sample image.');
       return;
@@ -172,15 +261,12 @@ export function VisionModelLab() {
       setError('This browser could not encode the sample image.');
       return;
     }
-
     setError(null);
     setPreview(blob);
   }
 
   function selectImage(file: File | undefined) {
-    if (!file) {
-      return;
-    }
+    if (!file) return;
     if (!file.type.startsWith('image/')) {
       setError('Choose an image file.');
       return;
@@ -189,7 +275,7 @@ export function VisionModelLab() {
     setPreview(file);
   }
 
-  function runCaption() {
+  async function runCaption() {
     if (!image) {
       setError('Choose an image or use the built-in sample first.');
       return;
@@ -201,10 +287,67 @@ export function VisionModelLab() {
     setCaption('');
     setDurationMs(null);
     setStatus('running');
-    post({ image, requestId, type: 'caption' });
+
+    try {
+      const data = await image.arrayBuffer();
+      for await (const event of ensureAdapter().run(
+        { data, kind: 'image', mimeType: image.type || 'image/png' },
+        { requestId },
+      )) {
+        if (!mountedRef.current || requestId !== requestRef.current) continue;
+        handleRunEvent(event);
+      }
+      if (mountedRef.current && requestId === requestRef.current) {
+        requestRef.current = null;
+        setStatus('ready');
+      }
+    } catch (runError) {
+      if (!mountedRef.current || requestId !== requestRef.current) return;
+      requestRef.current = null;
+      if (runError instanceof RuntimeError && runError.code === 'ABORTED') {
+        setStatus('idle');
+      } else {
+        setError(errorMessage(runError, 'Image captioning failed.'));
+        setStatus('error');
+      }
+    }
   }
 
-  const ready = status === 'ready' || status === 'running';
+  function handleRunEvent(event: RuntimeEvent) {
+    if (event.type === 'result' && typeof event.data.caption === 'string') {
+      setCaption(event.data.caption);
+    }
+    if (event.type === 'complete') {
+      setDurationMs(event.durationMs);
+    }
+  }
+
+  async function cancel() {
+    setStatus('cancelling');
+    await ensureAdapter().abort(requestRef.current ?? undefined);
+  }
+
+  async function unload() {
+    try {
+      await ensureAdapter().unload();
+      if (mountedRef.current) {
+        requestRef.current = null;
+        setLoadTimeMs(null);
+        setDurationMs(null);
+        setCaption('');
+        setProgress(null);
+        setStatus('idle');
+      }
+    } catch (unloadError) {
+      if (mountedRef.current) {
+        setError(errorMessage(unloadError, 'Vision model unloading failed.'));
+        setStatus('error');
+      }
+    }
+  }
+
+  const ready = status === 'ready' || status === 'running' || status === 'cancelling';
+  const busy = status === 'loading' || status === 'running' || status === 'cancelling';
 
   return (
     <section className="section vision-lab-section" id="vision-lab">
@@ -222,7 +365,7 @@ export function VisionModelLab() {
       <div className="vision-lab-grid">
         <div className="vision-input">
           <div className="model-console__bar">
-            <span>{VISION_SPIKE_MODEL}</span>
+            <span>{visionModel.source.modelId}</span>
             <span className={`model-state model-state--${status}`}>{status}</span>
           </div>
 
@@ -237,7 +380,7 @@ export function VisionModelLab() {
           <div className="model-actions">
             <button
               className="button button--quiet"
-              disabled={status === 'running'}
+              disabled={status === 'running' || status === 'cancelling'}
               onClick={() => void useSample()}
               type="button"
             >
@@ -247,13 +390,17 @@ export function VisionModelLab() {
               Choose image
               <input
                 accept="image/*"
-                disabled={status === 'running'}
+                disabled={status === 'running' || status === 'cancelling'}
                 onChange={(event) => selectImage(event.target.files?.[0])}
                 type="file"
               />
             </label>
             {!ready && status !== 'loading' ? (
-              <button className="button button--primary" onClick={loadModel} type="button">
+              <button
+                className="button button--primary"
+                onClick={() => void loadModel()}
+                type="button"
+              >
                 Download vision model
               </button>
             ) : null}
@@ -263,25 +410,74 @@ export function VisionModelLab() {
               </button>
             ) : null}
             {status === 'ready' ? (
-              <button className="button button--primary" onClick={runCaption} type="button">
+              <button
+                className="button button--primary"
+                onClick={() => void runCaption()}
+                type="button"
+              >
                 Describe image
               </button>
             ) : null}
-            {status === 'running' ? (
-              <button className="button button--primary" disabled type="button">
-                Looking…
+            {status === 'running' || status === 'cancelling' ? (
+              <button
+                className="button button--danger"
+                disabled={status === 'cancelling'}
+                onClick={() => void cancel()}
+                type="button"
+              >
+                {status === 'cancelling' ? 'Stopping…' : 'Stop analysis'}
               </button>
             ) : null}
             {status === 'ready' ? (
-              <button
-                className="button button--quiet"
-                onClick={() => post({ type: 'unload' })}
-                type="button"
-              >
+              <button className="button button--quiet" onClick={() => void unload()} type="button">
                 Unload vision model
               </button>
             ) : null}
           </div>
+
+          {downloadWarning ? (
+            <div className="download-warning" role="alert">
+              <p>{downloadWarning}</p>
+              <div>
+                <button
+                  className="button button--primary"
+                  onClick={() => void loadModel(true)}
+                  type="button"
+                >
+                  Continue download
+                </button>
+                <button
+                  className="button button--quiet"
+                  onClick={() => setDownloadWarning(null)}
+                  type="button"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          <label className="local-only-control">
+            <input
+              checked={cachedFilesOnly}
+              disabled={busy || ready}
+              onChange={(event) => setCachedFilesOnly(event.target.checked)}
+              type="checkbox"
+            />
+            <span>
+              Cached files only
+              <small>Blocks missing Hugging Face model requests.</small>
+            </span>
+          </label>
+
+          <button
+            className="cache-inspect-button"
+            disabled={busy}
+            onClick={() => void inspectCache()}
+            type="button"
+          >
+            Inspect vision cache
+          </button>
 
           {status === 'loading' ? (
             <div
@@ -315,7 +511,20 @@ export function VisionModelLab() {
               <dt>Execution</dt>
               <dd>WebGPU worker</dd>
             </div>
+            <div>
+              <dt>Offline cache</dt>
+              <dd>
+                {!cacheInspected
+                  ? 'Not inspected'
+                  : `${cacheStatus.files.filter((file) => file.cached).length}/${cacheStatus.files.length} files`}
+              </dd>
+            </div>
+            <div>
+              <dt>Install record</dt>
+              <dd>{installRecord?.status ?? 'Not recorded'}</dd>
+            </div>
           </dl>
+          {storageMessage ? <p className="storage-message">{storageMessage}</p> : null}
         </aside>
       </div>
     </section>
