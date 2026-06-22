@@ -374,6 +374,27 @@ h2 {
   accent-color: var(--ember);
 }
 
+.download-card__actions,
+.download-card__confirmation > div {
+  display: flex;
+  gap: 8px;
+}
+
+.download-card__confirmation {
+  grid-column: 1 / -1;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.download-card__confirmation p {
+  margin-bottom: 16px;
+}
+
+.download-error {
+  margin: 18px 0 0;
+  color: var(--ember-light);
+}
+
 .empty-state {
   padding: 48px;
   border: 1px dashed var(--line);

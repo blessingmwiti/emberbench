@@ -1,8 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { listModels } = vi.hoisted(() => ({
+const { listModels, removeModel } = vi.hoisted(() => ({
   listModels: vi.fn(),
+  removeModel: vi.fn(),
 }));
 
 vi.mock('../storage/database', () => ({
@@ -12,11 +13,16 @@ vi.mock('../storage/database', () => ({
   },
 }));
 
+vi.mock('../storage/remove-installed-model', () => ({
+  removeInstalledModel: removeModel,
+}));
+
 import { DownloadCenter } from './DownloadCenter';
 
 describe('DownloadCenter', () => {
   beforeEach(() => {
     listModels.mockReset();
+    removeModel.mockReset();
   });
 
   it('shows interrupted progress with a recovery action', async () => {
@@ -48,6 +54,12 @@ describe('DownloadCenter', () => {
       'href',
       '#/models',
     );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Remove cached files');
+    removeModel.mockResolvedValue(undefined);
+    fireEvent.click(screen.getByRole('button', { name: 'Remove model files' }));
+    await waitFor(() => expect(removeModel).toHaveBeenCalledOnce());
   });
 
   it('offers the model catalog when no download records exist', async () => {

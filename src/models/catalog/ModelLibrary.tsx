@@ -8,9 +8,8 @@ import {
 } from '../../diagnostics/recommend-device-tier';
 import type { DeviceDiagnostic } from '../../diagnostics/types';
 import type { InstalledModel, ModelManifest } from './types';
-import { transitionInstalledModel } from '../installed-model';
-import { createRuntimeAdapter } from '../../runtimes/create-runtime-adapter';
 import { INSTALLED_MODELS_CHANGED_EVENT, installedModels } from '../../storage/database';
+import { removeInstalledModel } from '../../storage/remove-installed-model';
 import { getCuratedModels, getModelDownloadSize } from './registry';
 
 function readInstallLabel(model: ModelManifest, installed: InstalledModel | undefined) {
@@ -82,29 +81,15 @@ export function ModelLibrary({ diagnostic }: { diagnostic: DeviceDiagnostic | nu
   ).length;
 
   async function removeLocalModel(model: ModelManifest, installation: InstalledModel) {
-    const adapter = createRuntimeAdapter(model);
     setRemovingModelId(model.id);
     setRemovalError(null);
 
-    let removing = transitionInstalledModel(installation, 'removing');
     try {
-      await installedModels.put(removing);
-      const result = await adapter.deleteCache(model);
-      if (result.filesCached !== result.filesDeleted) {
-        throw new Error(
-          `Deleted ${result.filesDeleted} of ${result.filesCached} cached model files.`,
-        );
-      }
-      await installedModels.delete(model.id);
+      await removeInstalledModel(model, installation);
       setConfirmRemovalId(null);
     } catch (error) {
-      removing = transitionInstalledModel(removing, 'failed', {
-        lastError: error instanceof Error ? error.message : 'Model deletion failed.',
-      });
-      await installedModels.put(removing).catch(() => {});
-      setRemovalError(removing.lastError ?? 'Model deletion failed.');
+      setRemovalError(error instanceof Error ? error.message : 'Model deletion failed.');
     } finally {
-      adapter.terminate();
       setRemovingModelId(null);
     }
   }

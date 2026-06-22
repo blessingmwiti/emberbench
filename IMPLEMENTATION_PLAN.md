@@ -384,8 +384,8 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [ ] Build the Installed Models page.
 - [ ] Show used and estimated available storage.
 - [x] Show incomplete installations.
-- [ ] Add retry, cancel, repair, and delete actions.
-- [ ] Confirm destructive deletion.
+- [~] Add retry, cancel, repair, and delete actions.
+- [x] Confirm destructive deletion.
 - [ ] Explain browser eviction and persistent storage.
 - [x] Request persistent storage at an appropriate user-driven moment.
 
@@ -1111,4 +1111,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Persist understandable download state across page reloads.
 - [x] Add application routing for Home, Models, Downloads, and Settings.
 - [x] Weight runtime download progress across declared model artifacts.
-- [ ] Add retry and delete actions to the Downloads page.
+- [x] Add a coordinated delete action to the Downloads page.
+- [ ] Extract a shared model-installation service for direct retries from Downloads.

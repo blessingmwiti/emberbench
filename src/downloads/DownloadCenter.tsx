@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { findCuratedModel } from '../models/catalog/registry';
 import type { InstalledModel } from '../models/catalog/types';
 import { INSTALLED_MODELS_CHANGED_EVENT, installedModels } from '../storage/database';
+import { removeInstalledModel } from '../storage/remove-installed-model';
 
 function statusLabel(model: InstalledModel) {
   switch (model.status) {
@@ -27,6 +28,9 @@ function progressValue(model: InstalledModel) {
 export function DownloadCenter() {
   const [records, setRecords] = useState<InstalledModel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmRemovalId, setConfirmRemovalId] = useState<string | null>(null);
+  const [removingModelId, setRemovingModelId] = useState<string | null>(null);
+  const [removalError, setRemovalError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -48,6 +52,25 @@ export function DownloadCenter() {
       window.removeEventListener(INSTALLED_MODELS_CHANGED_EVENT, refresh);
     };
   }, []);
+
+  async function removeRecord(record: InstalledModel) {
+    const manifest = findCuratedModel(record.modelId);
+    if (!manifest) {
+      setRemovalError('This model is no longer in the curated registry.');
+      return;
+    }
+
+    setRemovingModelId(record.modelId);
+    setRemovalError(null);
+    try {
+      await removeInstalledModel(manifest, record);
+      setConfirmRemovalId(null);
+    } catch (error) {
+      setRemovalError(error instanceof Error ? error.message : 'Model deletion failed.');
+    } finally {
+      setRemovingModelId(null);
+    }
+  }
 
   return (
     <section className="section downloads-section" aria-labelledby="downloads-heading">
@@ -95,13 +118,57 @@ export function DownloadCenter() {
                   />
                   <span>{progress}%</span>
                 </div>
-                <a className="button button--quiet" href="#/models">
-                  {record.status === 'failed' ? 'Retry in Models' : 'Open Models'}
-                </a>
+                <div className="download-card__actions">
+                  <a className="button button--quiet" href="#/models">
+                    {record.status === 'failed' ? 'Retry in Models' : 'Open Models'}
+                  </a>
+                  <button
+                    className="button button--danger"
+                    disabled={removingModelId === record.modelId}
+                    onClick={() => {
+                      setRemovalError(null);
+                      setConfirmRemovalId(record.modelId);
+                    }}
+                    type="button"
+                  >
+                    Remove
+                  </button>
+                </div>
+                {confirmRemovalId === record.modelId ? (
+                  <div className="download-card__confirmation" role="alert">
+                    <p>
+                      Remove cached files and this local download record? The model must be
+                      downloaded again before offline use.
+                    </p>
+                    <div>
+                      <button
+                        className="button button--danger"
+                        disabled={removingModelId === record.modelId}
+                        onClick={() => void removeRecord(record)}
+                        type="button"
+                      >
+                        {removingModelId === record.modelId ? 'Removing…' : 'Remove model files'}
+                      </button>
+                      <button
+                        className="button button--quiet"
+                        disabled={removingModelId === record.modelId}
+                        onClick={() => setConfirmRemovalId(null)}
+                        type="button"
+                      >
+                        Keep model
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
               </article>
             );
           })}
         </div>
+      ) : null}
+      {removalError ? (
+        <p className="download-error" role="alert">
+          {removalError}
+        </p>
       ) : null}
     </section>
   );
