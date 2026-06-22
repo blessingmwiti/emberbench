@@ -168,6 +168,8 @@ The in-app browser controller did not expose network emulation for this check, s
 
 Download failures are now normalized before reaching the UI. Offline state, authentication or gated access, missing pinned artifacts, rate limits, server failures, and ambiguous fetch/CORS failures each receive specific guidance. Permanent 403/404-style failures no longer consume automatic retry attempts.
 
+Downloads now reports browser-wide storage usage, estimated remaining quota, total estimated quota, and whether persistent-storage eviction protection is granted. The interface explicitly distinguishes these browser estimates from model-only byte totals.
+
 ## Open feasibility risks
 
 - WebGPU device loss during active inference
@@ -180,4 +182,4 @@ Download failures are now normalized before reaching the UI. Offline state, auth
 
 ## Next experiment
 
-Show used and estimated available browser storage in Downloads.
+Add an Installed Models view with offline-ready and repair filters.

@@ -39,6 +39,13 @@ describe('DownloadCenter', () => {
     removeModel.mockReset();
     install.mockReset();
     terminate.mockReset();
+    Object.defineProperty(navigator, 'storage', {
+      configurable: true,
+      value: {
+        estimate: vi.fn().mockResolvedValue({ quota: 1_000_000_000, usage: 250_000_000 }),
+        persisted: vi.fn().mockResolvedValue(false),
+      },
+    });
   });
 
   it('shows interrupted progress with a recovery action', async () => {
@@ -71,6 +78,8 @@ describe('DownloadCenter', () => {
     expect(screen.getByText('33%')).toBeInTheDocument();
     expect(screen.getByText('onnx/model_q4.onnx_data')).toBeInTheDocument();
     expect(screen.getByText('31%', { exact: false })).toBeInTheDocument();
+    expect(await screen.findByText('715.3 MB')).toBeInTheDocument();
+    expect(screen.getByText('Not granted')).toBeInTheDocument();
     install.mockResolvedValue({});
     fireEvent.click(screen.getByRole('button', { name: 'Retry download' }));
     await waitFor(() => expect(install).toHaveBeenCalledOnce());

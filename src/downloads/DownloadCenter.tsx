@@ -29,6 +29,12 @@ function progressValue(model: InstalledModel) {
   return Math.round((model.downloadProgress ?? 0) * 100);
 }
 
+interface StorageSummary {
+  persisted: boolean | null;
+  quota: number | null;
+  usage: number | null;
+}
+
 export function DownloadCenter() {
   const retryControllers = useRef(new Map<string, AbortController>());
   const [records, setRecords] = useState<InstalledModel[]>([]);
@@ -38,6 +44,7 @@ export function DownloadCenter() {
   const [removalError, setRemovalError] = useState<string | null>(null);
   const [retryingModelId, setRetryingModelId] = useState<string | null>(null);
   const [retryMessage, setRetryMessage] = useState<string | null>(null);
+  const [storage, setStorage] = useState<StorageSummary | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -50,6 +57,19 @@ export function DownloadCenter() {
         .finally(() => {
           if (active) setLoading(false);
         });
+      if (navigator.storage?.estimate) {
+        void Promise.all([
+          navigator.storage.estimate(),
+          navigator.storage.persisted?.() ?? Promise.resolve(null),
+        ]).then(([estimate, persisted]) => {
+          if (!active) return;
+          setStorage({
+            persisted,
+            quota: estimate.quota ?? null,
+            usage: estimate.usage ?? null,
+          });
+        });
+      }
     };
 
     refresh();
@@ -139,6 +159,41 @@ export function DownloadCenter() {
           their last known progress and are checked against the local cache after reload.
         </p>
       </div>
+
+      {storage ? (
+        <dl className="download-storage" aria-label="Browser storage estimate">
+          <div>
+            <dt>Browser storage used</dt>
+            <dd>{formatBytes(storage.usage)}</dd>
+          </div>
+          <div>
+            <dt>Estimated available</dt>
+            <dd>
+              {storage.quota === null || storage.usage === null
+                ? 'Not reported'
+                : formatBytes(Math.max(0, storage.quota - storage.usage))}
+            </dd>
+          </div>
+          <div>
+            <dt>Estimated quota</dt>
+            <dd>{formatBytes(storage.quota)}</dd>
+          </div>
+          <div>
+            <dt>Eviction protection</dt>
+            <dd>
+              {storage.persisted === null
+                ? 'Not reported'
+                : storage.persisted
+                  ? 'Granted'
+                  : 'Not granted'}
+            </dd>
+          </div>
+        </dl>
+      ) : null}
+      <p className="download-storage-note">
+        Browser-wide estimates include the app shell and other Emberbench data, not only model
+        files. The browser may change quota or evict non-persistent data under storage pressure.
+      </p>
 
       {loading ? <p className="empty-state">Reading local download state…</p> : null}
       {!loading && records.length === 0 ? (

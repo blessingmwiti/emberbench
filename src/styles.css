@@ -246,10 +246,11 @@ footer {
 }
 
 .button--quiet {
+  background: transparent;
   color: var(--cream);
 }
 
-.button--quiet:hover {
+.button--quiet:hover:not(:disabled) {
   border-color: var(--muted);
   background: var(--surface);
 }
@@ -325,6 +326,43 @@ h2 {
 .download-list {
   display: grid;
   gap: 12px;
+}
+
+.download-storage {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin: 0 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.download-storage div {
+  padding: 20px;
+  border-right: 1px solid var(--line);
+}
+
+.download-storage div:last-child {
+  border-right: 0;
+}
+
+.download-storage dt {
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.download-storage dd {
+  margin: 0;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 14px;
+}
+
+.download-storage-note {
+  margin: 0 0 32px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .download-card {
@@ -1618,6 +1656,18 @@ footer span:first-child {
   .download-card {
     grid-template-columns: 1fr;
     gap: 20px;
+  }
+
+  .download-storage {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .download-storage div:nth-child(2) {
+    border-right: 0;
+  }
+
+  .download-storage div:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--line);
   }
 
   .model-library-grid {

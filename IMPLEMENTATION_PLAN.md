@@ -382,11 +382,11 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 - [x] Build the Downloads page.
 - [ ] Build the Installed Models page.
-- [ ] Show used and estimated available storage.
+- [x] Show used and estimated available storage.
 - [x] Show incomplete installations.
 - [~] Add retry, cancel, repair, and delete actions.
 - [x] Confirm destructive deletion.
-- [ ] Explain browser eviction and persistent storage.
+- [x] Explain browser eviction and persistent storage.
 - [x] Request persistent storage at an appropriate user-driven moment.
 
 ### Exit criteria
@@ -1116,4 +1116,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Surface active per-file transfer detail in the Downloads page.
 - [x] Handle online-to-offline transitions during active downloads.
 - [x] Map server, HTTP, and CORS download failures to actionable errors.
-- [ ] Show used and estimated available browser storage in Downloads.
+- [x] Show used and estimated available browser storage in Downloads.
+- [ ] Add an Installed Models view with offline-ready and repair filters.
