@@ -487,7 +487,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [x] Persist conversations locally.
 - [x] Delete individual conversations.
 - [x] Expose generation settings behind an advanced panel.
-- [ ] Display the active model and local-processing status.
+- [x] Display the active model and local-processing status.
 
 ### Code Lab workspace
 
@@ -1129,4 +1129,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Add safe Markdown and code-block rendering to General Assistant.
 - [x] Add edit-and-resubmit support for prior user messages.
 - [x] Expose General Assistant generation settings in an advanced panel.
-- [ ] Display the active General Assistant model and local-processing status.
+- [x] Display the active General Assistant model and local-processing status.
+- [ ] Build the first Code Lab workspace shell on the shared session repository.
