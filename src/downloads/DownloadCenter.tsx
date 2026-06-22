@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { formatBytes } from '../diagnostics/format';
 import { findCuratedModel } from '../models/catalog/registry';
 import type { InstalledModel } from '../models/catalog/types';
 import { createRuntimeAdapter } from '../runtimes/create-runtime-adapter';
@@ -171,6 +172,16 @@ export function DownloadCenter() {
                     value={progress}
                   />
                   <span>{progress}%</span>
+                  {record.downloadArtifact ? (
+                    <p className="download-card__artifact">
+                      <code>{record.downloadArtifact}</code>
+                      <span>
+                        {Math.round((record.downloadArtifactProgress ?? 0) * 100)}% ·{' '}
+                        {formatBytes(record.downloadLoadedBytes ?? null)} of{' '}
+                        {formatBytes(record.expectedBytes)}
+                      </span>
+                    </p>
+                  ) : null}
                 </div>
                 <div className="download-card__actions">
                   {record.status === 'failed' ? (

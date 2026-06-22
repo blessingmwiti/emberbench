@@ -374,6 +374,20 @@ h2 {
   accent-color: var(--ember);
 }
 
+.download-card__artifact {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.download-card__artifact code {
+  overflow: hidden;
+  color: var(--cream);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .download-card__actions,
 .download-card__confirmation > div {
   display: flex;

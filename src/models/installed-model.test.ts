@@ -83,5 +83,11 @@ describe('installed model lifecycle', () => {
         downloadProgress: 2,
       }),
     ).toBeNull();
+    expect(
+      parseInstalledModel({
+        ...createInstalledModel(getManifest()),
+        downloadArtifactProgress: -0.1,
+      }),
+    ).toBeNull();
   });
 });

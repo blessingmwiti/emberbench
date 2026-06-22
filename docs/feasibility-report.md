@@ -160,6 +160,8 @@ An explicit runtime probe then downloaded the pinned SmolLM2 revision, initializ
 
 Runtime download adapters now combine per-artifact progress using manifest byte sizes. A tiny graph file reaching 100% therefore no longer makes an external-data model appear fully downloaded; progress events expose the active artifact, its progress, loaded bytes, total bytes, and weighted overall progress.
 
+The shared installation service persists that artifact detail with the model record. The Downloads page can therefore show the active file, its own percentage, transferred bytes, and overall model progress across reloads and direct retries.
+
 ## Open feasibility risks
 
 - WebGPU device loss during active inference
@@ -172,4 +174,4 @@ Runtime download adapters now combine per-artifact progress using manifest byte 
 
 ## Next experiment
 
-Surface active per-file transfer detail in the Downloads page.
+Handle online-to-offline transitions during active downloads.

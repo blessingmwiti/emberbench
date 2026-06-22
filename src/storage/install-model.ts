@@ -3,6 +3,7 @@ import { createInstalledModel, transitionInstalledModel } from '../models/instal
 import type {
   ModelRuntimeAdapter,
   RuntimeCacheStatus,
+  RuntimeEvent,
   RuntimeSession,
 } from '../runtimes/core/types';
 import { installedModels } from './database';
@@ -13,7 +14,7 @@ export interface InstallModelOptions {
   adapter: ModelRuntimeAdapter;
   cachedFilesOnly?: boolean;
   manifest: ModelManifest;
-  onProgress?: (progress: number) => void;
+  onProgress?: (event: Extract<RuntimeEvent, { type: 'progress' }>) => void;
   onQueueChange?: (message: string | null) => void;
   onRecord?: (record: InstalledModel) => void;
   onRetry?: (attempt: number) => void;
@@ -51,6 +52,7 @@ export async function installModel(options: InstallModelOptions): Promise<Instal
   const existing = await installedModels.get(manifest.id).catch(() => null);
   let record = beginRecord(manifest, existing, cachedFilesOnly ? 'verifying' : 'downloading');
   let lease: Awaited<ReturnType<typeof modelDownloads.acquire>> | null = null;
+  let lastPersistedArtifact = record.downloadArtifact;
   let lastPersistedProgress = record.downloadProgress ?? 0;
 
   const persist = async () => {
@@ -70,11 +72,18 @@ export async function installModel(options: InstallModelOptions): Promise<Instal
         async () => {
           for await (const event of adapter.download(manifest, { signal: options.signal })) {
             if (event.type !== 'progress') continue;
-            options.onProgress?.(event.progress);
-            if (Math.abs(event.progress - lastPersistedProgress) >= 0.05) {
+            options.onProgress?.(event);
+            if (
+              event.artifact !== lastPersistedArtifact ||
+              Math.abs(event.progress - lastPersistedProgress) >= 0.05
+            ) {
               record = transitionInstalledModel(record, 'downloading', {
+                downloadArtifact: event.artifact,
+                downloadArtifactProgress: event.artifactProgress,
+                downloadLoadedBytes: event.loadedBytes,
                 downloadProgress: event.progress,
               });
+              lastPersistedArtifact = event.artifact;
               lastPersistedProgress = event.progress;
               await persist();
             }
@@ -84,6 +93,9 @@ export async function installModel(options: InstallModelOptions): Promise<Instal
           onRetry: async (attempt) => {
             record = transitionInstalledModel(record, 'downloading', {
               downloadAttempt: attempt,
+              downloadArtifact: undefined,
+              downloadArtifactProgress: undefined,
+              downloadLoadedBytes: 0,
               downloadProgress: 0,
             });
             lastPersistedProgress = 0;
@@ -112,7 +124,7 @@ export async function installModel(options: InstallModelOptions): Promise<Instal
       throw new Error(record.lastError);
     }
 
-    options.onProgress?.(1);
+    options.onProgress?.({ phase: 'initialize', progress: 1, type: 'progress' });
     return { cache, record, session };
   } catch (error) {
     if (record.status !== 'failed') {

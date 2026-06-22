@@ -47,6 +47,9 @@ describe('DownloadCenter', () => {
         cachedFiles: 2,
         createdAt: '2026-06-22T04:00:00.000Z',
         downloadAttempt: 2,
+        downloadArtifact: 'onnx/model_q4.onnx_data',
+        downloadArtifactProgress: 0.31,
+        downloadLoadedBytes: 57_000_000,
         downloadProgress: 0.33,
         expectedBytes: 173_700_000,
         lastError: 'The page closed before the download completed.',
@@ -66,6 +69,8 @@ describe('DownloadCenter', () => {
     expect(screen.getByText('Needs attention')).toBeInTheDocument();
     expect(screen.getByText('Attempt 2', { exact: false })).toBeInTheDocument();
     expect(screen.getByText('33%')).toBeInTheDocument();
+    expect(screen.getByText('onnx/model_q4.onnx_data')).toBeInTheDocument();
+    expect(screen.getByText('31%', { exact: false })).toBeInTheDocument();
     install.mockResolvedValue({});
     fireEvent.click(screen.getByRole('button', { name: 'Retry download' }));
     await waitFor(() => expect(install).toHaveBeenCalledOnce());

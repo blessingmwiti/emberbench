@@ -367,7 +367,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 ### Download manager
 
 - [x] Implement queued downloads.
-- [~] Implement per-file and overall progress.
+- [x] Implement per-file and overall progress.
 - [x] Implement cancellation.
 - [x] Implement retry with bounded backoff.
 - [ ] Implement resume where technically supported.
@@ -1113,4 +1113,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Weight runtime download progress across declared model artifacts.
 - [x] Add a coordinated delete action to the Downloads page.
 - [x] Extract a shared model-installation service for direct retries from Downloads.
-- [ ] Surface active per-file transfer detail in the Downloads page.
+- [x] Surface active per-file transfer detail in the Downloads page.
+- [ ] Handle online-to-offline transitions during active downloads.

@@ -59,8 +59,22 @@ describe('installModel', () => {
   it('coordinates download, progress persistence, verification, and installation', async () => {
     const progress = vi.fn();
     const runtime = adapter([
-      { phase: 'download', progress: 0.02, type: 'progress' },
-      { phase: 'download', progress: 0.51, type: 'progress' },
+      {
+        artifact: 'onnx/model_q4.onnx',
+        artifactProgress: 1,
+        loadedBytes: 275_214,
+        phase: 'download',
+        progress: 0.02,
+        type: 'progress',
+      },
+      {
+        artifact: 'onnx/model_q4.onnx_data',
+        artifactProgress: 0.51,
+        loadedBytes: 92_000_000,
+        phase: 'download',
+        progress: 0.51,
+        type: 'progress',
+      },
     ]);
 
     const result = await installModel({
@@ -70,11 +84,17 @@ describe('installModel', () => {
     });
 
     expect(mocks.acquire).toHaveBeenCalledWith(manifest().id, undefined);
-    expect(progress).toHaveBeenCalledWith(0.02);
-    expect(progress).toHaveBeenCalledWith(0.51);
+    expect(progress).toHaveBeenCalledWith(expect.objectContaining({ progress: 0.02 }));
+    expect(progress).toHaveBeenCalledWith(expect.objectContaining({ progress: 0.51 }));
     expect(result.record.status).toBe('installed');
     expect(mocks.put).toHaveBeenCalledWith(
-      expect.objectContaining({ downloadProgress: 0.51, status: 'downloading' }),
+      expect.objectContaining({
+        downloadArtifact: 'onnx/model_q4.onnx_data',
+        downloadArtifactProgress: 0.51,
+        downloadLoadedBytes: 92_000_000,
+        downloadProgress: 0.51,
+        status: 'downloading',
+      }),
     );
     expect(mocks.put).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'installed' }));
     expect(mocks.release).toHaveBeenCalledOnce();

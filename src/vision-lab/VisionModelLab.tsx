@@ -184,8 +184,8 @@ export function VisionModelLab() {
         adapter,
         cachedFilesOnly,
         manifest: visionModel,
-        onProgress: (nextProgress) => {
-          if (mountedRef.current) setProgress(nextProgress * 100);
+        onProgress: (event) => {
+          if (mountedRef.current) setProgress(event.progress * 100);
         },
         onQueueChange: (message) => {
           if (mountedRef.current) setDownloadQueueMessage(message);
