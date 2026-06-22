@@ -7,7 +7,12 @@ import { createInstalledModel, transitionInstalledModel } from '../models/instal
 import { RuntimeError } from '../runtimes/core/errors';
 import type { RuntimeCacheStatus, RuntimeEvent } from '../runtimes/core/types';
 import { TransformersVisionWorkerAdapter } from '../runtimes/transformers/vision-worker-adapter';
-import { INSTALLED_MODELS_CHANGED_EVENT, installedModels } from '../storage/database';
+import {
+  appSettings,
+  INSTALLED_MODELS_CHANGED_EVENT,
+  installedModels,
+  SETTINGS_CHANGED_EVENT,
+} from '../storage/database';
 import { runDownloadPreflight } from '../storage/download-preflight';
 
 type VisionStatus = 'idle' | 'loading' | 'ready' | 'running' | 'cancelling' | 'error';
@@ -51,6 +56,7 @@ export function VisionModelLab() {
   const [installRecord, setInstallRecord] = useState<InstalledModel | null>(null);
   const [storageMessage, setStorageMessage] = useState<string | null>(null);
   const [downloadWarning, setDownloadWarning] = useState<string | null>(null);
+  const [confirmLargeDownloads, setConfirmLargeDownloads] = useState(true);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -66,12 +72,26 @@ export function VisionModelLab() {
           }
         });
     };
+    const refreshSettings = () => {
+      void appSettings
+        .get()
+        .then((settings) => {
+          if (mountedRef.current) {
+            setCachedFilesOnly(settings.defaultCachedFilesOnly);
+            setConfirmLargeDownloads(settings.confirmLargeDownloads);
+          }
+        })
+        .catch(() => {});
+    };
 
     refreshInstallRecord();
+    refreshSettings();
     window.addEventListener(INSTALLED_MODELS_CHANGED_EVENT, refreshInstallRecord);
+    window.addEventListener(SETTINGS_CHANGED_EVENT, refreshSettings);
     return () => {
       mountedRef.current = false;
       window.removeEventListener(INSTALLED_MODELS_CHANGED_EVENT, refreshInstallRecord);
+      window.removeEventListener(SETTINGS_CHANGED_EVENT, refreshSettings);
       adapterRef.current?.terminate();
       if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
     };
@@ -146,7 +166,7 @@ export function VisionModelLab() {
         setError(detail);
         return;
       }
-      if (preflight.status === 'warning') {
+      if (preflight.status === 'warning' && confirmLargeDownloads) {
         setDownloadWarning(detail);
         return;
       }

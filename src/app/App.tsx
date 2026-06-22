@@ -11,6 +11,7 @@ import { ModelImporter } from '../models/importer/ModelImporter';
 import { ModelLibrary } from '../models/catalog/ModelLibrary';
 import { TextModelLab } from '../model-lab/TextModelLab';
 import { PwaStatus } from '../pwa/PwaStatus';
+import { SettingsPanel } from '../settings/SettingsPanel';
 import { reconcileInstallations } from '../storage/reconcile-installations';
 import { VisionModelLab } from '../vision-lab/VisionModelLab';
 
@@ -131,6 +132,7 @@ export function App() {
           <a href="#model-lab">Model Lab</a>
           <a href="#vision-lab">Vision</a>
           <a href="#model-importer">Import</a>
+          <a href="#settings">Settings</a>
           <a href="#roadmap">Roadmap</a>
         </nav>
         <PwaStatus />
@@ -338,6 +340,8 @@ export function App() {
         <VisionModelLab />
 
         <ModelImporter />
+
+        <SettingsPanel />
 
         <section className="section roadmap-section" id="roadmap">
           <p className="kicker">BUILD ORDER</p>

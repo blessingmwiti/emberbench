@@ -4,7 +4,12 @@ import { formatBytes } from '../diagnostics/format';
 import { findCuratedModel } from '../models/catalog/registry';
 import type { InstalledModel, InstalledModelStatus } from '../models/catalog/types';
 import { createInstalledModel, transitionInstalledModel } from '../models/installed-model';
-import { INSTALLED_MODELS_CHANGED_EVENT, installedModels } from '../storage/database';
+import {
+  appSettings,
+  INSTALLED_MODELS_CHANGED_EVENT,
+  installedModels,
+  SETTINGS_CHANGED_EVENT,
+} from '../storage/database';
 import { runDownloadPreflight } from '../storage/download-preflight';
 import type { RuntimeCacheStatus, RuntimeEvent } from '../runtimes/core/types';
 import { RuntimeError } from '../runtimes/core/errors';
@@ -61,6 +66,7 @@ export function TextModelLab() {
   const [installRecord, setInstallRecord] = useState<InstalledModel | null>(null);
   const [storageMessage, setStorageMessage] = useState<string | null>(null);
   const [downloadWarning, setDownloadWarning] = useState<string | null>(null);
+  const [confirmLargeDownloads, setConfirmLargeDownloads] = useState(true);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -78,12 +84,26 @@ export function TextModelLab() {
           }
         });
     };
+    const refreshSettings = () => {
+      void appSettings
+        .get()
+        .then((settings) => {
+          if (mountedRef.current) {
+            setCachedFilesOnly(settings.defaultCachedFilesOnly);
+            setConfirmLargeDownloads(settings.confirmLargeDownloads);
+          }
+        })
+        .catch(() => {});
+    };
 
     refreshInstallRecord();
+    refreshSettings();
     window.addEventListener(INSTALLED_MODELS_CHANGED_EVENT, refreshInstallRecord);
+    window.addEventListener(SETTINGS_CHANGED_EVENT, refreshSettings);
     return () => {
       mountedRef.current = false;
       window.removeEventListener(INSTALLED_MODELS_CHANGED_EVENT, refreshInstallRecord);
+      window.removeEventListener(SETTINGS_CHANGED_EVENT, refreshSettings);
       adapterRef.current?.terminate();
     };
   }, []);
@@ -151,7 +171,7 @@ export function TextModelLab() {
         setError(detail);
         return;
       }
-      if (preflight.status === 'warning') {
+      if (preflight.status === 'warning' && confirmLargeDownloads) {
         setDownloadWarning(detail);
         return;
       }

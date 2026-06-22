@@ -345,12 +345,12 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [x] Define the IndexedDB database and stores.
 - [x] Add schema migrations.
 - [x] Store model installation metadata.
-- [ ] Store application settings.
+- [x] Store application settings.
 - [ ] Store conversations and workspace sessions.
 - [ ] Store benchmark summaries.
 - [x] Implement transactional writes where state must remain consistent.
 - [x] Handle corrupted or incompatible persisted data.
-- [ ] Add a full local-data reset flow.
+- [x] Add a full local-data reset flow.
 
 ### Model artifact storage
 
@@ -1105,4 +1105,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Add equivalent cache lifecycle support to the vision runtime adapter.
 - [x] Add storage preflight checks before model downloads.
 - [x] Add model-installation repair and stale-record reconciliation.
-- [ ] Add settings persistence and a full local-data reset flow.
+- [x] Add settings persistence and a full local-data reset flow.
+- [ ] Add queued download coordination and duplicate-download prevention.

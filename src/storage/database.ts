@@ -2,13 +2,21 @@ import type { InstalledModel } from '../models/catalog/types';
 import { parseInstalledModel } from '../models/installed-model';
 
 const DATABASE_NAME = 'emberbench';
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 const INSTALLED_MODELS_STORE = 'installed-models';
+const SETTINGS_STORE = 'settings';
 export const INSTALLED_MODELS_CHANGED_EVENT = 'emberbench:installed-models-changed';
+export const SETTINGS_CHANGED_EVENT = 'emberbench:settings-changed';
 
 function announceInstalledModelsChanged() {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event(INSTALLED_MODELS_CHANGED_EVENT));
+  }
+}
+
+function announceSettingsChanged() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT));
   }
 }
 
@@ -51,6 +59,11 @@ export function openEmberbenchDatabase(factory: IDBFactory = indexedDB): Promise
         });
         store.createIndex('status', 'status');
         store.createIndex('updatedAt', 'updatedAt');
+      }
+      if (!database.objectStoreNames.contains(SETTINGS_STORE)) {
+        database.createObjectStore(SETTINGS_STORE, {
+          keyPath: 'id',
+        });
       }
     });
     request.addEventListener('success', () => resolve(request.result), { once: true });
@@ -146,3 +159,81 @@ export class InstalledModelRepository {
 }
 
 export const installedModels = new InstalledModelRepository();
+
+export interface AppSettings {
+  confirmLargeDownloads: boolean;
+  defaultCachedFilesOnly: boolean;
+  id: 'app';
+  schemaVersion: 1;
+}
+
+export const DEFAULT_APP_SETTINGS: AppSettings = {
+  confirmLargeDownloads: true,
+  defaultCachedFilesOnly: false,
+  id: 'app',
+  schemaVersion: 1,
+};
+
+export function parseAppSettings(value: unknown): AppSettings | null {
+  if (!value || typeof value !== 'object') return null;
+  const settings = value as Partial<AppSettings>;
+  if (
+    settings.id !== 'app' ||
+    settings.schemaVersion !== 1 ||
+    typeof settings.confirmLargeDownloads !== 'boolean' ||
+    typeof settings.defaultCachedFilesOnly !== 'boolean'
+  ) {
+    return null;
+  }
+  return settings as AppSettings;
+}
+
+export class SettingsRepository {
+  constructor(private readonly factory?: IDBFactory) {}
+
+  async get(): Promise<AppSettings> {
+    const database = await openEmberbenchDatabase(this.factory);
+    try {
+      const transaction = database.transaction(SETTINGS_STORE, 'readonly');
+      const value = await requestResult(
+        transaction.objectStore(SETTINGS_STORE).get('app') as IDBRequest<unknown>,
+      );
+      return parseAppSettings(value) ?? DEFAULT_APP_SETTINGS;
+    } finally {
+      database.close();
+    }
+  }
+
+  async put(settings: AppSettings): Promise<void> {
+    if (!parseAppSettings(settings)) {
+      throw new Error('Refusing to persist invalid application settings.');
+    }
+    const database = await openEmberbenchDatabase(this.factory);
+    try {
+      const transaction = database.transaction(SETTINGS_STORE, 'readwrite');
+      const completed = transactionCompleted(transaction);
+      await requestResult(transaction.objectStore(SETTINGS_STORE).put(settings));
+      await completed;
+      announceSettingsChanged();
+    } finally {
+      database.close();
+    }
+  }
+}
+
+export const appSettings = new SettingsRepository();
+
+export async function clearEmberbenchDatabase(factory: IDBFactory = indexedDB): Promise<void> {
+  const database = await openEmberbenchDatabase(factory);
+  try {
+    const transaction = database.transaction([INSTALLED_MODELS_STORE, SETTINGS_STORE], 'readwrite');
+    const completed = transactionCompleted(transaction);
+    transaction.objectStore(INSTALLED_MODELS_STORE).clear();
+    transaction.objectStore(SETTINGS_STORE).clear();
+    await completed;
+  } finally {
+    database.close();
+  }
+  announceInstalledModelsChanged();
+  announceSettingsChanged();
+}
