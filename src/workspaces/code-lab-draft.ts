@@ -72,3 +72,40 @@ export function codeLabHint(draft: CodeLabDraft) {
   };
   return hints[draft.mode];
 }
+
+export function codeLabPrompt(draft: CodeLabDraft) {
+  const recipes: Record<CodeLabMode, string> = {
+    debug:
+      'Find the most likely cause, explain the failing path, and propose the smallest safe fix. Include corrected code when useful.',
+    explain:
+      'Explain what the code does, how the important parts interact, and any non-obvious behavior. Match the requested audience.',
+    generate:
+      'Generate complete code that follows the stated inputs, outputs, constraints, and edge cases. State any assumptions briefly.',
+    refactor:
+      'Refactor for the requested quality while preserving behavior. Explain the material changes and return the revised code.',
+    review:
+      'Review for correctness, security, performance, and maintainability. Prioritize findings and show concrete fixes.',
+  };
+  const instruction = draft.instruction.trim() || 'Use best judgment for this task.';
+  const source = draft.code.trim()
+    ? `\n\nSource (${draft.language}):\n\`\`\`${draft.language}\n${draft.code.trim()}\n\`\`\``
+    : '';
+
+  return [
+    '<|im_start|>system',
+    'You are a careful local coding assistant. Never claim code was executed. Remind the user to review and test changes before execution.',
+    '<|im_end|>',
+    '<|im_start|>user',
+    `Task mode: ${draft.mode}`,
+    `Instruction: ${instruction}`,
+    recipes[draft.mode],
+    source,
+    '<|im_end|>',
+    '<|im_start|>assistant',
+  ].join('\n');
+}
+
+export function extractGeneratedCode(content: string) {
+  const fenced = /```(?:[A-Za-z0-9_-]+)?\s*\n([\s\S]*?)```/.exec(content);
+  return fenced?.[1]?.trim() || content.trim();
+}

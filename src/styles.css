@@ -1059,6 +1059,10 @@ h2 {
   padding: 24px;
 }
 
+.code-runtime-status {
+  margin: -24px -24px 20px;
+}
+
 .code-mode-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -1164,6 +1168,42 @@ h2 {
   flex-wrap: wrap;
   gap: 9px;
   margin-top: 18px;
+}
+
+.code-lab-result {
+  margin-top: 20px;
+  padding: 18px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: #18120f;
+}
+
+.code-lab-result > span {
+  color: var(--ember-light);
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.code-lab-result > :not(span) {
+  line-height: 1.65;
+}
+
+.code-lab-result pre {
+  max-width: 100%;
+  padding: 14px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  background: #110d0b;
+}
+
+.code-lab-result code {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+}
+
+.code-lab-result > button {
+  margin-top: 12px;
 }
 
 .model-library-grid {
@@ -1422,6 +1462,37 @@ h2 {
   margin-top: 18px;
   padding-top: 16px;
   border-top: 1px solid var(--line);
+}
+
+.model-install {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.model-install > .button {
+  width: 100%;
+}
+
+.model-install progress {
+  width: 100%;
+  height: 7px;
+  accent-color: var(--ember);
+}
+
+.model-install > div {
+  margin-top: 7px;
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.model-install > p {
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
 }
 
 .model-remove-button {

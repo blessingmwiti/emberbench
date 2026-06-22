@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { formatBytes } from '../../diagnostics/format';
 import {
@@ -7,8 +7,16 @@ import {
   type ModelDeviceFit,
 } from '../../diagnostics/recommend-device-tier';
 import type { DeviceDiagnostic } from '../../diagnostics/types';
+import { runDownloadPreflight } from '../../storage/download-preflight';
+import { installModel } from '../../storage/install-model';
+import {
+  appSettings,
+  INSTALLED_MODELS_CHANGED_EVENT,
+  installedModels,
+} from '../../storage/database';
+import { createRuntimeAdapter } from '../../runtimes/create-runtime-adapter';
+import { resolveTransformersRuntimeDevice } from '../../runtimes/transformers/runtime-device';
 import type { InstalledModel, ModelManifest } from './types';
-import { INSTALLED_MODELS_CHANGED_EVENT, installedModels } from '../../storage/database';
 import { removeInstalledModel } from '../../storage/remove-installed-model';
 import { getCuratedModels, getModelDownloadSize } from './registry';
 import { matchesModelLibraryFilter, type ModelLibraryFilter } from './library-filter';
@@ -51,6 +59,11 @@ export function ModelLibrary({ diagnostic }: { diagnostic: DeviceDiagnostic | nu
   const [removingModelId, setRemovingModelId] = useState<string | null>(null);
   const [removalError, setRemovalError] = useState<string | null>(null);
   const [filter, setFilter] = useState<ModelLibraryFilter>('all');
+  const [installingModelId, setInstallingModelId] = useState<string | null>(null);
+  const [installMessageModelId, setInstallMessageModelId] = useState<string | null>(null);
+  const [installProgress, setInstallProgress] = useState(0);
+  const [installMessage, setInstallMessage] = useState<string | null>(null);
+  const installControllerRef = useRef<AbortController | null>(null);
 
   const refreshInstallations = useCallback(async () => {
     try {
@@ -70,6 +83,7 @@ export function ModelLibrary({ diagnostic }: { diagnostic: DeviceDiagnostic | nu
     void refreshInstallations();
     window.addEventListener(INSTALLED_MODELS_CHANGED_EVENT, handleInstallationsChanged);
     return () => {
+      installControllerRef.current?.abort();
       window.removeEventListener(INSTALLED_MODELS_CHANGED_EVENT, handleInstallationsChanged);
     };
   }, [refreshInstallations]);
@@ -99,6 +113,55 @@ export function ModelLibrary({ diagnostic }: { diagnostic: DeviceDiagnostic | nu
       setRemovalError(error instanceof Error ? error.message : 'Model deletion failed.');
     } finally {
       setRemovingModelId(null);
+    }
+  }
+
+  async function installLocalModel(model: ModelManifest) {
+    setInstallMessageModelId(model.id);
+    setInstallMessage(null);
+    setInstallProgress(0);
+    const preflight = await runDownloadPreflight(model);
+    if (preflight.status === 'blocked') {
+      setInstallMessage(preflight.message);
+      return;
+    }
+
+    const controller = new AbortController();
+    const settings = await appSettings.get();
+    const adapter = createRuntimeAdapter(
+      model,
+      resolveTransformersRuntimeDevice(settings.runtimePreference),
+    );
+    installControllerRef.current = controller;
+    setInstallingModelId(model.id);
+    if (preflight.status === 'warning') setInstallMessage(preflight.message);
+
+    try {
+      await installModel({
+        adapter,
+        manifest: model,
+        onProgress: (event) => setInstallProgress(event.progress),
+        onQueueChange: setInstallMessage,
+        onRetry: (attempt) => setInstallMessage(`Retrying · attempt ${attempt} of 3…`),
+        signal: controller.signal,
+      });
+      setInstallProgress(1);
+      setInstallMessage(`${model.name} is ready for offline use.`);
+    } catch (error) {
+      const cancelled =
+        (error instanceof DOMException && error.name === 'AbortError') ||
+        (error instanceof Error && error.message.toLowerCase().includes('abort'));
+      setInstallMessage(
+        cancelled
+          ? 'Download cancelled. Complete cached files will be reused on retry.'
+          : error instanceof Error
+            ? error.message
+            : 'Model installation failed.',
+      );
+    } finally {
+      adapter.terminate();
+      installControllerRef.current = null;
+      setInstallingModelId(null);
     }
   }
 
@@ -196,6 +259,40 @@ export function ModelLibrary({ diagnostic }: { diagnostic: DeviceDiagnostic | nu
               >
                 View pinned source ↗
               </a>
+              {installingModelId === model.id ||
+              installationStatus === 'none' ||
+              installationStatus === 'failed' ||
+              installation?.sourceRevision !== model.source.revision ? (
+                <div className="model-install">
+                  {installingModelId === model.id ? (
+                    <>
+                      <progress max="1" value={installProgress} />
+                      <div>
+                        <span>{Math.round(installProgress * 100)}%</span>
+                        <button
+                          className="model-remove-button"
+                          onClick={() => installControllerRef.current?.abort()}
+                          type="button"
+                        >
+                          Cancel download
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <button
+                      className="button button--primary"
+                      disabled={installingModelId !== null}
+                      onClick={() => void installLocalModel(model)}
+                      type="button"
+                    >
+                      {installationStatus === 'failed' ? 'Retry installation' : 'Install model'}
+                    </button>
+                  )}
+                  {installMessage && installMessageModelId === model.id ? (
+                    <p role="status">{installMessage}</p>
+                  ) : null}
+                </div>
+              ) : null}
               {(installationStatus === 'installed' || confirmRemovalId === model.id) &&
               installation &&
               (model.requirements.task === 'text-generation' ||

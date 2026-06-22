@@ -101,6 +101,11 @@ Qwen2.5-Coder 0.5B for Code Lab, and ViT-GPT2 for image captioning. Experimental
 manifest is pinned and structurally validated; a model is promoted only after repeatable browser
 and device testing.
 
+On June 22, 2026, the pinned Qwen2.5-Coder q4 build completed an Emberbench WebGPU probe from
+browser cache: roughly 1.2 seconds from request to generation state, first output observed about
+0.26 seconds later, and about 52.4 seconds for a 128-token debugging response. These are one-device
+development measurements, not general performance claims.
+
 ### 2. Workspaces
 
 Workspaces adapt the interface, system instructions, tools, and inputs to a task. Initial workspace ideas include:
