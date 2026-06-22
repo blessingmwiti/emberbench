@@ -374,7 +374,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [x] Preserve understandable state after page reload.
 - [x] Check available storage before starting.
 - [x] Warn about metered or very large downloads where detectable.
-- [ ] Handle offline transitions during download.
+- [x] Handle offline transitions during download.
 - [ ] Handle server and CORS failures.
 - [x] Prevent two downloads from writing the same model simultaneously.
 
@@ -1114,4 +1114,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Add a coordinated delete action to the Downloads page.
 - [x] Extract a shared model-installation service for direct retries from Downloads.
 - [x] Surface active per-file transfer detail in the Downloads page.
-- [ ] Handle online-to-offline transitions during active downloads.
+- [x] Handle online-to-offline transitions during active downloads.
+- [ ] Map server, HTTP, and CORS download failures to actionable errors.

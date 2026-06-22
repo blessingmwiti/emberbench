@@ -162,6 +162,10 @@ Runtime download adapters now combine per-artifact progress using manifest byte 
 
 The shared installation service persists that artifact detail with the model record. The Downloads page can therefore show the active file, its own percentage, transferred bytes, and overall model progress across reloads and direct retries.
 
+Active remote installations also listen for the browser moving offline. Connectivity loss aborts the worker, bypasses pointless automatic retries, preserves completed cache data and progress, and records a recoverable reconnect-and-retry error.
+
+The in-app browser controller did not expose network emulation for this check, so the offline transition is currently verified by an integration test that dispatches the browser event and asserts abort, persistence, no retry, and lock release. A physical browser network-toggle test remains useful cross-browser validation.
+
 ## Open feasibility risks
 
 - WebGPU device loss during active inference
@@ -174,4 +178,4 @@ The shared installation service persists that artifact detail with the model rec
 
 ## Next experiment
 
-Handle online-to-offline transitions during active downloads.
+Map server, HTTP, and CORS download failures to actionable errors.

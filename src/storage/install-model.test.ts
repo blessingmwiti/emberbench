@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { findCuratedModel } from '../models/catalog/registry';
+import type { InstalledModel } from '../models/catalog/types';
 import type { ModelRuntimeAdapter, RuntimeEvent } from '../runtimes/core/types';
 
 const mocks = vi.hoisted(() => ({
@@ -51,6 +52,7 @@ function adapter(events: RuntimeEvent[], cached = true) {
 describe('installModel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
     mocks.acquire.mockResolvedValue({ release: mocks.release });
     mocks.get.mockResolvedValue(null);
     mocks.put.mockResolvedValue(undefined);
@@ -83,7 +85,7 @@ describe('installModel', () => {
       onProgress: progress,
     });
 
-    expect(mocks.acquire).toHaveBeenCalledWith(manifest().id, undefined);
+    expect(mocks.acquire).toHaveBeenCalledWith(manifest().id, expect.any(AbortSignal));
     expect(progress).toHaveBeenCalledWith(expect.objectContaining({ progress: 0.02 }));
     expect(progress).toHaveBeenCalledWith(expect.objectContaining({ progress: 0.51 }));
     expect(result.record.status).toBe('installed');
@@ -117,5 +119,50 @@ describe('installModel', () => {
       }),
     );
     expect(mocks.release).toHaveBeenCalledOnce();
+  });
+
+  it('stops without retrying when the browser goes offline mid-download', async () => {
+    const runtime = {
+      async *download(
+        _manifest: unknown,
+        options: { signal?: AbortSignal },
+      ): AsyncIterable<RuntimeEvent> {
+        window.dispatchEvent(new Event('offline'));
+        await Promise.resolve();
+        if (options.signal?.aborted) {
+          throw new DOMException('Download was aborted.', 'AbortError');
+        }
+        yield* [];
+      },
+    } as unknown as ModelRuntimeAdapter;
+
+    await expect(
+      installModel({
+        adapter: runtime,
+        manifest: manifest(),
+      }),
+    ).rejects.toMatchObject({
+      code: 'NETWORK_UNAVAILABLE',
+      recoverable: true,
+    });
+
+    const failedRecord = mocks.put.mock.lastCall?.[0] as unknown as InstalledModel;
+    expect(failedRecord.status).toBe('failed');
+    expect(failedRecord.lastError).toContain('went offline');
+    expect(mocks.acquire).toHaveBeenCalledOnce();
+    expect(mocks.release).toHaveBeenCalledOnce();
+  });
+
+  it('does not queue a remote download while already offline', async () => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+
+    await expect(
+      installModel({
+        adapter: adapter([]),
+        manifest: manifest(),
+      }),
+    ).rejects.toMatchObject({ code: 'NETWORK_UNAVAILABLE' });
+
+    expect(mocks.acquire).not.toHaveBeenCalled();
   });
 });

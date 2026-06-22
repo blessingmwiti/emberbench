@@ -6,6 +6,7 @@ import type {
   RuntimeEvent,
   RuntimeSession,
 } from '../runtimes/core/types';
+import { RuntimeError } from '../runtimes/core/errors';
 import { installedModels } from './database';
 import { modelDownloads } from './download-coordinator';
 import { withBoundedRetry } from './retry';
@@ -49,6 +50,34 @@ function errorMessage(error: unknown) {
 export async function installModel(options: InstallModelOptions): Promise<InstallModelResult> {
   const { adapter, manifest } = options;
   const cachedFilesOnly = options.cachedFilesOnly ?? false;
+  if (!cachedFilesOnly && !navigator.onLine) {
+    throw new RuntimeError(
+      'NETWORK_UNAVAILABLE',
+      'This browser is offline. Reconnect before retrying the model download.',
+      { recoverable: true },
+    );
+  }
+
+  const transferController = new AbortController();
+  let wentOffline = false;
+  const abortFromCaller = () => transferController.abort(options.signal?.reason);
+  const handleOffline = () => {
+    wentOffline = true;
+    transferController.abort(
+      new RuntimeError(
+        'NETWORK_UNAVAILABLE',
+        'The browser went offline during the model download.',
+        { recoverable: true },
+      ),
+    );
+  };
+  if (options.signal?.aborted) {
+    abortFromCaller();
+  } else {
+    options.signal?.addEventListener('abort', abortFromCaller, { once: true });
+  }
+  if (!cachedFilesOnly) window.addEventListener('offline', handleOffline);
+
   const existing = await installedModels.get(manifest.id).catch(() => null);
   let record = beginRecord(manifest, existing, cachedFilesOnly ? 'verifying' : 'downloading');
   let lease: Awaited<ReturnType<typeof modelDownloads.acquire>> | null = null;
@@ -60,17 +89,18 @@ export async function installModel(options: InstallModelOptions): Promise<Instal
     await installedModels.put(record);
   };
 
-  await persist();
-
   try {
+    await persist();
     if (!cachedFilesOnly) {
       options.onQueueChange?.('Waiting for the model download slot…');
-      lease = await modelDownloads.acquire(manifest.id, options.signal);
+      lease = await modelDownloads.acquire(manifest.id, transferController.signal);
       options.onQueueChange?.(null);
 
       await withBoundedRetry(
         async () => {
-          for await (const event of adapter.download(manifest, { signal: options.signal })) {
+          for await (const event of adapter.download(manifest, {
+            signal: transferController.signal,
+          })) {
             if (event.type !== 'progress') continue;
             options.onProgress?.(event);
             if (
@@ -102,7 +132,7 @@ export async function installModel(options: InstallModelOptions): Promise<Instal
             await persist();
             options.onRetry?.(attempt);
           },
-          signal: options.signal,
+          signal: transferController.signal,
         },
       );
 
@@ -127,18 +157,27 @@ export async function installModel(options: InstallModelOptions): Promise<Instal
     options.onProgress?.({ phase: 'initialize', progress: 1, type: 'progress' });
     return { cache, record, session };
   } catch (error) {
+    const failure = wentOffline
+      ? new RuntimeError(
+          'NETWORK_UNAVAILABLE',
+          'The browser went offline during the model download. Reconnect and retry to reuse cached files.',
+          { cause: error, recoverable: true },
+        )
+      : error;
     if (record.status !== 'failed') {
       try {
         record = transitionInstalledModel(record, 'failed', {
-          lastError: errorMessage(error),
+          lastError: errorMessage(failure),
         });
         await persist();
       } catch {
         // Preserve the original installation error.
       }
     }
-    throw error;
+    throw failure;
   } finally {
+    options.signal?.removeEventListener('abort', abortFromCaller);
+    window.removeEventListener('offline', handleOffline);
     options.onQueueChange?.(null);
     lease?.release();
   }
