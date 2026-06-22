@@ -380,10 +380,10 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Storage interface
 
-- [ ] Build the Downloads page.
+- [x] Build the Downloads page.
 - [ ] Build the Installed Models page.
 - [ ] Show used and estimated available storage.
-- [ ] Show incomplete installations.
+- [x] Show incomplete installations.
 - [ ] Add retry, cancel, repair, and delete actions.
 - [ ] Confirm destructive deletion.
 - [ ] Explain browser eviction and persistent storage.
@@ -1109,4 +1109,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Add queued download coordination and duplicate-download prevention.
 - [x] Add download cancellation and bounded retry handling.
 - [x] Persist understandable download state across page reloads.
-- [ ] Add application routing for Home, Models, Downloads, and Settings.
+- [x] Add application routing for Home, Models, Downloads, and Settings.
+- [ ] Add retry and delete actions to the Downloads page.

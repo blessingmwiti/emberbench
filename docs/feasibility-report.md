@@ -170,4 +170,4 @@ An explicit runtime probe then downloaded the pinned SmolLM2 revision, initializ
 
 ## Next experiment
 
-Add application routing for Home, Models, Downloads, and Settings.
+Add retry and delete actions to the Downloads page.
