@@ -15,6 +15,7 @@ import {
   createWorkspaceSession,
   removeLastAssistantMessage,
   renameWorkspaceSession,
+  reviseWorkspaceUserMessage,
   type WorkspaceSession,
 } from './session';
 import { copyText } from './clipboard';
@@ -44,6 +45,8 @@ export function AssistantWorkspace() {
   const [notice, setNotice] = useState<string | null>(null);
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameTitle, setRenameTitle] = useState('');
+  const [editMessageId, setEditMessageId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -174,6 +177,24 @@ export function AssistantWorkspace() {
     }
   }
 
+  async function saveMessageRevision() {
+    if (!session || !editMessageId || busy) return;
+    try {
+      const revised = reviseWorkspaceUserMessage(session, editMessageId, editContent);
+      await workspaceSessions.put(revised);
+      setSession(revised);
+      setEditMessageId(null);
+      setEditContent('');
+      await generateReply(revised);
+    } catch (revisionError) {
+      setError(
+        revisionError instanceof Error
+          ? revisionError.message
+          : 'The message could not be revised.',
+      );
+    }
+  }
+
   async function copyMessage(content: string) {
     try {
       await copyText(content);
@@ -276,18 +297,75 @@ export function AssistantWorkspace() {
         <div className="assistant-chat">
           <div className="assistant-messages" aria-live="polite">
             {session?.messages.length ? (
-              session.messages.map((message) => (
+              session.messages.map((message, messageIndex) => (
                 <article
                   className={`assistant-message assistant-message--${message.role}`}
                   key={message.id}
                 >
                   <span>{message.role === 'user' ? 'You' : 'Assistant'}</span>
-                  <div className="assistant-message__content">
-                    <MarkdownContent content={message.content} />
-                  </div>
-                  <button onClick={() => void copyMessage(message.content)} type="button">
-                    Copy
-                  </button>
+                  {editMessageId === message.id ? (
+                    <form
+                      className="assistant-message__editor"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        void saveMessageRevision();
+                      }}
+                    >
+                      <label htmlFor={`edit-${message.id}`}>Edit message</label>
+                      <textarea
+                        autoFocus
+                        id={`edit-${message.id}`}
+                        onChange={(event) => setEditContent(event.target.value)}
+                        rows={6}
+                        value={editContent}
+                      />
+                      {messageIndex < session.messages.length - 1 ? (
+                        <p>Saving removes the later messages and regenerates from this point.</p>
+                      ) : null}
+                      <div>
+                        <button
+                          className="button button--primary"
+                          disabled={!editContent.trim() || busy}
+                          type="submit"
+                        >
+                          Save and regenerate
+                        </button>
+                        <button
+                          className="button"
+                          onClick={() => {
+                            setEditMessageId(null);
+                            setEditContent('');
+                          }}
+                          type="button"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <>
+                      <div className="assistant-message__content">
+                        <MarkdownContent content={message.content} />
+                      </div>
+                      <div className="assistant-message__actions">
+                        <button onClick={() => void copyMessage(message.content)} type="button">
+                          Copy
+                        </button>
+                        {message.role === 'user' ? (
+                          <button
+                            disabled={busy}
+                            onClick={() => {
+                              setEditMessageId(message.id);
+                              setEditContent(message.content);
+                            }}
+                            type="button"
+                          >
+                            Edit
+                          </button>
+                        ) : null}
+                      </div>
+                    </>
+                  )}
                 </article>
               ))
             ) : (

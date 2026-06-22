@@ -752,8 +752,14 @@ h2 {
   text-underline-offset: 3px;
 }
 
-.assistant-message > button {
+.assistant-message__actions {
+  display: flex;
+  gap: 12px;
   margin-top: 10px;
+}
+
+.assistant-message__actions button {
+  margin-top: 0;
   padding: 0;
   border: 0;
   background: transparent;
@@ -762,8 +768,48 @@ h2 {
   font-size: 10px;
 }
 
-.assistant-message > button:hover {
+.assistant-message__actions button:hover {
   color: var(--cream);
+}
+
+.assistant-message__editor {
+  margin-top: 10px;
+}
+
+.assistant-message__editor label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.assistant-message__editor textarea {
+  width: 100%;
+  padding: 12px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  outline: none;
+  background: #110d0b;
+  color: var(--cream);
+  font: inherit;
+  line-height: 1.55;
+}
+
+.assistant-message__editor textarea:focus {
+  border-color: var(--ember);
+}
+
+.assistant-message__editor > p {
+  margin: 8px 0;
+  color: var(--gold);
+  font-size: 10px;
+}
+
+.assistant-message__editor > div {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .assistant-composer {

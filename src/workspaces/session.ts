@@ -135,3 +135,30 @@ export function removeLastAssistantMessage(
     updatedAt: now.toISOString(),
   };
 }
+
+export function reviseWorkspaceUserMessage(
+  session: WorkspaceSession,
+  messageId: string,
+  content: string,
+  now = new Date(),
+): WorkspaceSession {
+  const normalized = content.trim();
+  if (!normalized) throw new Error('Workspace messages cannot be empty.');
+  const messageIndex = session.messages.findIndex((message) => message.id === messageId);
+  const message = session.messages[messageIndex];
+  if (!message || message.role !== 'user') {
+    throw new Error('Only an existing user message can be revised.');
+  }
+
+  return {
+    ...session,
+    messages: [
+      ...session.messages.slice(0, messageIndex),
+      {
+        ...message,
+        content: normalized,
+      },
+    ],
+    updatedAt: now.toISOString(),
+  };
+}
