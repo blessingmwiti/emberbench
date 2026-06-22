@@ -21,12 +21,14 @@ const originalFetch = scope.fetch.bind(scope);
 let blockRemoteModelRequests = false;
 
 interface ResolvedWorkerConfig {
+  device: NonNullable<TextModelWorkerConfig['device']>;
   dtype: NonNullable<TextModelWorkerConfig['dtype']>;
   modelId: string;
   revision: string;
 }
 
 const defaultConfig: ResolvedWorkerConfig = {
+  device: 'webgpu',
   dtype: 'q4',
   modelId: TEXT_SPIKE_MODEL,
   revision: 'main',
@@ -34,6 +36,7 @@ const defaultConfig: ResolvedWorkerConfig = {
 
 function resolveConfig(config: TextModelWorkerConfig): ResolvedWorkerConfig {
   return {
+    device: config.device ?? defaultConfig.device,
     dtype: config.dtype ?? defaultConfig.dtype,
     modelId: config.modelId ?? defaultConfig.modelId,
     revision: config.revision ?? defaultConfig.revision,
@@ -41,7 +44,7 @@ function resolveConfig(config: TextModelWorkerConfig): ResolvedWorkerConfig {
 }
 
 function configKey(config: ResolvedWorkerConfig) {
-  return `${config.modelId}@${config.revision}:${config.dtype}`;
+  return `${config.modelId}@${config.revision}:${config.device}:${config.dtype}`;
 }
 
 scope.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -60,7 +63,7 @@ async function createGenerator(config: ResolvedWorkerConfig, cachedFilesOnly = f
 
   try {
     const generator = await pipeline('text-generation', config.modelId, {
-      device: 'webgpu',
+      device: config.device,
       dtype: config.dtype,
       progress_callback: (data) => {
         post({
@@ -230,7 +233,7 @@ async function inspectCache(config: ResolvedWorkerConfig) {
   let status;
   try {
     status = await ModelRegistry.is_pipeline_cached_files('text-generation', config.modelId, {
-      device: 'webgpu',
+      device: config.device,
       dtype: config.dtype,
       revision: config.revision,
     });
@@ -260,7 +263,7 @@ async function deleteCache(config: ResolvedWorkerConfig) {
   const previousBlockRemoteModelRequests = blockRemoteModelRequests;
   blockRemoteModelRequests = true;
   const options = {
-    device: 'webgpu',
+    device: config.device,
     dtype: config.dtype,
     revision: config.revision,
   } as const;

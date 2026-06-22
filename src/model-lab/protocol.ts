@@ -6,6 +6,7 @@ export interface ModelCacheFile {
 }
 
 export interface TextModelWorkerConfig {
+  device?: 'wasm' | 'webgpu';
   dtype?: 'fp16' | 'fp32' | 'q4' | 'q4f16' | 'q8';
   modelId?: string;
   revision?: string;

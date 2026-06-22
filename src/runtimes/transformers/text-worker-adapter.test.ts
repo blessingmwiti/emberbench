@@ -44,11 +44,11 @@ async function collect<T>(events: AsyncIterable<T>) {
 
 describe('TransformersTextWorkerAdapter', () => {
   it('describes its runtime capabilities without starting a model', () => {
-    const adapter = new TransformersTextWorkerAdapter(() => new FakeWorker());
+    const adapter = new TransformersTextWorkerAdapter(() => new FakeWorker(), 'wasm');
 
     expect(adapter.capabilities()).toEqual({
       cacheInspection: true,
-      devices: ['webgpu'],
+      devices: ['webgpu', 'wasm'],
       inputKinds: ['text'],
       runtime: 'transformers-js',
       streaming: true,
@@ -58,12 +58,13 @@ describe('TransformersTextWorkerAdapter', () => {
 
   it('loads the pinned manifest configuration and streams generation events', async () => {
     const worker = new FakeWorker();
-    const adapter = new TransformersTextWorkerAdapter(() => worker);
+    const adapter = new TransformersTextWorkerAdapter(() => worker, 'wasm');
     const manifest = getTextManifest();
     const loaded = adapter.load(manifest, { cachedFilesOnly: true });
 
     expect(worker.requests[0]).toMatchObject({
       cachedFilesOnly: true,
+      device: 'wasm',
       dtype: 'q4',
       modelId: manifest.source.modelId,
       revision: manifest.source.revision,

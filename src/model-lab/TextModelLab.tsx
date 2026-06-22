@@ -14,6 +14,7 @@ import { installModel } from '../storage/install-model';
 import type { RuntimeCacheStatus, RuntimeEvent } from '../runtimes/core/types';
 import { RuntimeError } from '../runtimes/core/errors';
 import { TransformersTextWorkerAdapter } from '../runtimes/transformers/text-worker-adapter';
+import { discoverTransformersRuntimeDevice } from '../runtimes/transformers/runtime-device';
 
 type LabStatus = 'idle' | 'loading' | 'ready' | 'generating' | 'cancelling' | 'error';
 
@@ -31,6 +32,7 @@ if (!curatedTextModel) {
 }
 
 const textModel = curatedTextModel;
+const runtimeDevice = discoverTransformersRuntimeDevice();
 
 function formatDuration(milliseconds: number | null) {
   if (milliseconds === null) {
@@ -119,7 +121,7 @@ export function TextModelLab() {
   }, []);
 
   function ensureAdapter() {
-    adapterRef.current ??= new TransformersTextWorkerAdapter();
+    adapterRef.current ??= new TransformersTextWorkerAdapter(undefined, runtimeDevice);
     return adapterRef.current;
   }
 
@@ -478,7 +480,7 @@ export function TextModelLab() {
             </div>
             <div>
               <dt>Execution</dt>
-              <dd>WebGPU worker</dd>
+              <dd>{runtimeDevice === 'webgpu' ? 'WebGPU worker' : 'WebAssembly worker'}</dd>
             </div>
             <div>
               <dt>Offline cache</dt>

@@ -5,6 +5,7 @@ import { findCuratedModel } from '../models/catalog/registry';
 import type { InstalledModel } from '../models/catalog/types';
 import { RuntimeError } from '../runtimes/core/errors';
 import type { RuntimeCacheStatus, RuntimeEvent } from '../runtimes/core/types';
+import { discoverTransformersRuntimeDevice } from '../runtimes/transformers/runtime-device';
 import { TransformersVisionWorkerAdapter } from '../runtimes/transformers/vision-worker-adapter';
 import {
   appSettings,
@@ -22,6 +23,7 @@ if (!curatedVisionModel) {
   throw new Error('The curated Vision Model Lab model is missing.');
 }
 const visionModel = curatedVisionModel;
+const runtimeDevice = discoverTransformersRuntimeDevice();
 
 function formatDuration(milliseconds: number | null) {
   if (milliseconds === null) return '—';
@@ -108,7 +110,7 @@ export function VisionModelLab() {
   }, []);
 
   function ensureAdapter() {
-    adapterRef.current ??= new TransformersVisionWorkerAdapter();
+    adapterRef.current ??= new TransformersVisionWorkerAdapter(undefined, runtimeDevice);
     return adapterRef.current;
   }
 
@@ -371,8 +373,9 @@ export function VisionModelLab() {
           <h2>Let the browser look.</h2>
         </div>
         <p>
-          A separate WebGPU worker preprocesses an image and generates a caption locally. The
-          built-in sample is synthetic, so testing it sends no personal file anywhere.
+          A separate {runtimeDevice === 'webgpu' ? 'WebGPU' : 'WebAssembly'} worker preprocesses an
+          image and generates a caption locally. The built-in sample is synthetic, so testing it
+          sends no personal file anywhere.
         </p>
       </div>
 
@@ -531,7 +534,7 @@ export function VisionModelLab() {
             </div>
             <div>
               <dt>Execution</dt>
-              <dd>WebGPU worker</dd>
+              <dd>{runtimeDevice === 'webgpu' ? 'WebGPU worker' : 'WebAssembly worker'}</dd>
             </div>
             <div>
               <dt>Offline cache</dt>

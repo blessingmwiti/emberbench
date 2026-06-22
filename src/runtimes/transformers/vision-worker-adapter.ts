@@ -17,6 +17,10 @@ import type {
   RuntimeSession,
 } from '../core/types';
 import { ArtifactProgressTracker } from './artifact-progress';
+import {
+  discoverTransformersRuntimeDevice,
+  type TransformersRuntimeDevice,
+} from './runtime-device';
 
 interface VisionWorkerLike {
   addEventListener(type: 'error', listener: (event: Event) => void): void;
@@ -44,8 +48,9 @@ function getPrecision(manifest: ModelManifest): ModelPrecision {
   return artifact.precision;
 }
 
-function workerConfig(manifest: ModelManifest) {
+function workerConfig(manifest: ModelManifest, device: TransformersRuntimeDevice) {
   return {
+    device,
     dtype: getPrecision(manifest),
     modelId: manifest.source.modelId,
     revision: manifest.source.revision,
@@ -77,10 +82,15 @@ export class TransformersVisionWorkerAdapter implements ModelRuntimeAdapter {
   } | null = null;
   private worker: VisionWorkerLike;
   private readonly workerFactory: VisionWorkerFactory;
+  private readonly device: TransformersRuntimeDevice;
   session: RuntimeSession | null = null;
 
-  constructor(workerFactory: VisionWorkerFactory = createVisionWorker) {
+  constructor(
+    workerFactory: VisionWorkerFactory = createVisionWorker,
+    device = discoverTransformersRuntimeDevice(),
+  ) {
     this.workerFactory = workerFactory;
+    this.device = device;
     this.worker = workerFactory();
     this.bindWorker();
   }
@@ -107,7 +117,7 @@ export class TransformersVisionWorkerAdapter implements ModelRuntimeAdapter {
   capabilities(): RuntimeCapabilities {
     return {
       cacheInspection: true,
-      devices: ['webgpu'],
+      devices: ['webgpu', 'wasm'],
       inputKinds: ['image'],
       runtime: 'transformers-js',
       streaming: false,
@@ -127,7 +137,10 @@ export class TransformersVisionWorkerAdapter implements ModelRuntimeAdapter {
       const deleting = new Promise<RuntimeCacheDeleteResult>((resolve, reject) => {
         this.deletePromise = { reject, resolve };
       });
-      this.worker.postMessage({ ...workerConfig(manifest), type: 'delete-cache' });
+      this.worker.postMessage({
+        ...workerConfig(manifest, this.device),
+        type: 'delete-cache',
+      });
       return deleting;
     } catch (error) {
       return Promise.reject(toRuntimeError(error, 'CACHE_DELETE_FAILED'));
@@ -165,7 +178,7 @@ export class TransformersVisionWorkerAdapter implements ModelRuntimeAdapter {
       this.bindWorker();
     };
     options.signal?.addEventListener('abort', abort, { once: true });
-    this.worker.postMessage({ ...workerConfig(manifest), type: 'load' });
+    this.worker.postMessage({ ...workerConfig(manifest, this.device), type: 'load' });
 
     try {
       yield* queue;
@@ -190,7 +203,10 @@ export class TransformersVisionWorkerAdapter implements ModelRuntimeAdapter {
       const inspecting = new Promise<RuntimeCacheStatus>((resolve, reject) => {
         this.cachePromise = { reject, resolve };
       });
-      this.worker.postMessage({ ...workerConfig(manifest), type: 'inspect-cache' });
+      this.worker.postMessage({
+        ...workerConfig(manifest, this.device),
+        type: 'inspect-cache',
+      });
       return inspecting;
     } catch (error) {
       return Promise.reject(toRuntimeError(error, 'INITIALIZATION_FAILED'));
@@ -219,7 +235,7 @@ export class TransformersVisionWorkerAdapter implements ModelRuntimeAdapter {
         this.loadPromise = { reject, resolve };
       });
       this.worker.postMessage({
-        ...workerConfig(manifest),
+        ...workerConfig(manifest, this.device),
         cachedFilesOnly: options.cachedFilesOnly,
         type: 'load',
       });

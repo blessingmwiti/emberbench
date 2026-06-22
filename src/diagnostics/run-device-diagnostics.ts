@@ -83,7 +83,7 @@ export async function runDeviceDiagnostics(): Promise<DeviceDiagnostic> {
   const wasm = typeof WebAssembly !== 'undefined';
   const supportedPaths = [
     ...(webGpu.status === 'ready' ? ['Transformers.js / WebGPU'] : []),
-    ...(wasm ? ['WebAssembly available (fallback not wired)'] : []),
+    ...(wasm ? ['Transformers.js / WebAssembly fallback'] : []),
   ];
 
   return {

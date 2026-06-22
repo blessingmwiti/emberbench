@@ -14,12 +14,14 @@ const originalFetch = scope.fetch.bind(scope);
 let blockRemoteModelRequests = false;
 
 interface ResolvedVisionConfig {
+  device: NonNullable<VisionWorkerConfig['device']>;
   dtype: NonNullable<VisionWorkerConfig['dtype']>;
   modelId: string;
   revision: string;
 }
 
 const defaultConfig: ResolvedVisionConfig = {
+  device: 'webgpu',
   dtype: 'q8',
   modelId: VISION_SPIKE_MODEL,
   revision: 'main',
@@ -27,6 +29,7 @@ const defaultConfig: ResolvedVisionConfig = {
 
 function resolveConfig(config: VisionWorkerConfig): ResolvedVisionConfig {
   return {
+    device: config.device ?? defaultConfig.device,
     dtype: config.dtype ?? defaultConfig.dtype,
     modelId: config.modelId ?? defaultConfig.modelId,
     revision: config.revision ?? defaultConfig.revision,
@@ -34,7 +37,7 @@ function resolveConfig(config: VisionWorkerConfig): ResolvedVisionConfig {
 }
 
 function configKey(config: ResolvedVisionConfig) {
-  return `${config.modelId}@${config.revision}:${config.dtype}`;
+  return `${config.modelId}@${config.revision}:${config.device}:${config.dtype}`;
 }
 
 scope.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -55,7 +58,7 @@ async function createCaptioner(config: ResolvedVisionConfig, cachedFilesOnly = f
 
   try {
     const captioner = await pipeline('image-to-text', config.modelId, {
-      device: 'webgpu',
+      device: config.device,
       dtype: config.dtype,
       progress_callback: (data) => {
         post({
@@ -149,7 +152,7 @@ async function unload() {
 
 function registryOptions(config: ResolvedVisionConfig) {
   return {
-    device: 'webgpu',
+    device: config.device,
     dtype: config.dtype,
     revision: config.revision,
   } as const;

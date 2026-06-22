@@ -76,6 +76,7 @@ describe('direct worker protocols', () => {
 
     await import('./text-generation.worker');
     scope.dispatch({
+      device: 'webgpu',
       dtype: 'q4',
       modelId: 'owner/text-model',
       revision: 'pinned-text-revision',
@@ -109,6 +110,7 @@ describe('direct worker protocols', () => {
 
     await import('../vision-lab/image-caption.worker');
     scope.dispatch({
+      device: 'wasm',
       dtype: 'q8',
       modelId: 'owner/vision-model',
       revision: 'pinned-vision-revision',
@@ -125,7 +127,7 @@ describe('direct worker protocols', () => {
       'image-to-text',
       'owner/vision-model',
       expect.objectContaining({
-        device: 'webgpu',
+        device: 'wasm',
         dtype: 'q8',
         revision: 'pinned-vision-revision',
       }),

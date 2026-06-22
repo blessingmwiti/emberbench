@@ -41,11 +41,12 @@ async function collect<T>(events: AsyncIterable<T>) {
 describe('TransformersVisionWorkerAdapter', () => {
   it('loads a pinned manifest and returns an image result', async () => {
     const worker = new FakeVisionWorker();
-    const adapter = new TransformersVisionWorkerAdapter(() => worker);
+    const adapter = new TransformersVisionWorkerAdapter(() => worker, 'wasm');
     const model = manifest();
     const loading = adapter.load(model);
     expect(worker.requests[0]).toMatchObject({
       dtype: 'q8',
+      device: 'wasm',
       modelId: model.source.modelId,
       revision: model.source.revision,
       type: 'load',

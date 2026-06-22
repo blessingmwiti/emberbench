@@ -413,10 +413,10 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Runtime adapter
 
-- [ ] Implement Transformers.js runtime discovery.
+- [x] Implement Transformers.js runtime discovery.
 - [x] Implement model initialization.
 - [x] Select WebGPU when supported.
-- [ ] Implement practical WebAssembly fallback rules.
+- [~] Implement practical WebAssembly fallback rules.
 - [ ] Configure local/cached model resolution.
 - [x] Stream text-generation events.
 - [x] Support non-streaming task results.
@@ -1120,4 +1120,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Add an Installed Models view with offline-ready and repair filters.
 - [x] Handle WebGPU device loss during model load and inference.
 - [x] Add direct worker-protocol tests for text and vision workers.
-- [ ] Implement runtime discovery and practical WebAssembly fallback rules.
+- [x] Implement runtime discovery and practical WebAssembly fallback rules.
+- [ ] Add a force-WebAssembly preference and run a real fallback inference probe.

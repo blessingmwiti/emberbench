@@ -176,6 +176,8 @@ Runtime adapters now recognize WebGPU device-loss signatures during model prepar
 
 Direct worker tests now execute the worker modules with a mocked Transformers.js boundary. They verify pinned text configuration, WebGPU selection, progress-before-ready messages, and structured vision load errors in addition to the adapter contract suite.
 
+Runtime discovery now selects WebGPU only when it is exposed in a secure context and otherwise sends an explicit WebAssembly device choice through adapters and workers. Diagnostics report the wired fallback and recommend compact models instead of marking WebGPU-less browsers wholly unsupported. Direct worker tests verify the WASM selection reaches Transformers.js; real fallback inference is the next validation step.
+
 ## Open feasibility risks
 
 - Real browser propagation of WebGPU device loss during active inference
@@ -188,4 +190,4 @@ Direct worker tests now execute the worker modules with a mocked Transformers.js
 
 ## Next experiment
 
-Implement runtime discovery and practical WebAssembly fallback rules.
+Add a force-WebAssembly preference and run a real fallback inference probe.

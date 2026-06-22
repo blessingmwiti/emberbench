@@ -12,7 +12,7 @@ function diagnostic(
     checkedAt: '2026-01-01T00:00:00.000Z',
     online: true,
     runtime: {
-      supportedPaths: ['Transformers.js / WebGPU', 'WebAssembly available (fallback not wired)'],
+      supportedPaths: ['Transformers.js / WebGPU', 'Transformers.js / WebAssembly fallback'],
       wasm: true,
       webGpu: true,
     },
@@ -62,5 +62,19 @@ describe('device tier recommendations', () => {
 
     current.storage.quotaBytes = 100;
     expect(compareModelWithDevice(vision, current, tier)).toBe('insufficient-storage');
+  });
+
+  it('recommends compact models through WebAssembly when WebGPU is unavailable', () => {
+    const current = diagnostic();
+    current.runtime.webGpu = false;
+    current.webGpu.limits = null;
+    current.webGpu.status = 'unsupported';
+
+    const fallback = recommendDeviceTier(current);
+    expect(fallback?.tier).toBe('basic');
+    expect(fallback?.reason).toContain('WebAssembly worker');
+
+    current.runtime.wasm = false;
+    expect(recommendDeviceTier(current)?.tier).toBe('unsupported');
   });
 });
