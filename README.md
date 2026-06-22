@@ -96,6 +96,11 @@ Each model card shows:
 - Offline readiness
 - Community and device-specific benchmark results
 
+The current experimental browser set includes SmolLM2 135M for the General Assistant,
+Qwen2.5-Coder 0.5B for Code Lab, and ViT-GPT2 for image captioning. Experimental means the
+manifest is pinned and structurally validated; a model is promoted only after repeatable browser
+and device testing.
+
 ### 2. Workspaces
 
 Workspaces adapt the interface, system instructions, tools, and inputs to a task. Initial workspace ideas include:
