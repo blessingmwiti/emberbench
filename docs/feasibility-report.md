@@ -170,6 +170,8 @@ Download failures are now normalized before reaching the UI. Offline state, auth
 
 Downloads now reports browser-wide storage usage, estimated remaining quota, total estimated quota, and whether persistent-storage eviction protection is granted. The interface explicitly distinguishes these browser estimates from model-only byte totals.
 
+The Models route now includes All, Offline ready, and Needs attention views. Current pinned revisions must be fully verified before entering the offline-ready view; failures and stale revisions are grouped for repair.
+
 ## Open feasibility risks
 
 - WebGPU device loss during active inference
@@ -182,4 +184,4 @@ Downloads now reports browser-wide storage usage, estimated remaining quota, tot
 
 ## Next experiment
 
-Add an Installed Models view with offline-ready and repair filters.
+Handle WebGPU device loss during model load and inference.

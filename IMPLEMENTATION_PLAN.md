@@ -381,10 +381,10 @@ The goal of this phase is to eliminate the largest technical risks before invest
 ### Storage interface
 
 - [x] Build the Downloads page.
-- [ ] Build the Installed Models page.
+- [x] Build the Installed Models page.
 - [x] Show used and estimated available storage.
 - [x] Show incomplete installations.
-- [~] Add retry, cancel, repair, and delete actions.
+- [x] Add retry, cancel, repair, and delete actions.
 - [x] Confirm destructive deletion.
 - [x] Explain browser eviction and persistent storage.
 - [x] Request persistent storage at an appropriate user-driven moment.
@@ -1117,4 +1117,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Handle online-to-offline transitions during active downloads.
 - [x] Map server, HTTP, and CORS download failures to actionable errors.
 - [x] Show used and estimated available browser storage in Downloads.
-- [ ] Add an Installed Models view with offline-ready and repair filters.
+- [x] Add an Installed Models view with offline-ready and repair filters.
+- [ ] Handle WebGPU device loss during model load and inference.

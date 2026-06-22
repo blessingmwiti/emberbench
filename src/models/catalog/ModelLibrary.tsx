@@ -11,6 +11,7 @@ import type { InstalledModel, ModelManifest } from './types';
 import { INSTALLED_MODELS_CHANGED_EVENT, installedModels } from '../../storage/database';
 import { removeInstalledModel } from '../../storage/remove-installed-model';
 import { getCuratedModels, getModelDownloadSize } from './registry';
+import { matchesModelLibraryFilter, type ModelLibraryFilter } from './library-filter';
 
 function readInstallLabel(model: ModelManifest, installed: InstalledModel | undefined) {
   if (!installed) {
@@ -49,6 +50,7 @@ export function ModelLibrary({ diagnostic }: { diagnostic: DeviceDiagnostic | nu
   const [confirmRemovalId, setConfirmRemovalId] = useState<string | null>(null);
   const [removingModelId, setRemovingModelId] = useState<string | null>(null);
   const [removalError, setRemovalError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<ModelLibraryFilter>('all');
 
   const refreshInstallations = useCallback(async () => {
     try {
@@ -79,6 +81,12 @@ export function ModelLibrary({ diagnostic }: { diagnostic: DeviceDiagnostic | nu
       installations.get(model.id)?.status === 'installed' &&
       installations.get(model.id)?.sourceRevision === model.source.revision,
   ).length;
+  const attentionCount = curatedModels.filter((model) =>
+    matchesModelLibraryFilter('attention', model, installations.get(model.id)),
+  ).length;
+  const filteredModels = curatedModels.filter((model) =>
+    matchesModelLibraryFilter(filter, model, installations.get(model.id)),
+  );
 
   async function removeLocalModel(model: ModelManifest, installation: InstalledModel) {
     setRemovingModelId(model.id);
@@ -112,8 +120,27 @@ export function ModelLibrary({ diagnostic }: { diagnostic: DeviceDiagnostic | nu
         </p>
       </div>
 
+      <div className="model-library-filters" aria-label="Filter model library">
+        {(
+          [
+            ['all', `All (${curatedModels.length})`],
+            ['installed', `Offline ready (${installedCount})`],
+            ['attention', `Needs attention (${attentionCount})`],
+          ] as const
+        ).map(([value, label]) => (
+          <button
+            aria-pressed={filter === value}
+            key={value}
+            onClick={() => setFilter(value)}
+            type="button"
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       <div className="model-library-grid">
-        {curatedModels.map((model) => {
+        {filteredModels.map((model) => {
           const installation = installations.get(model.id);
           const installationStatus =
             installation?.sourceRevision === model.source.revision ? installation.status : 'none';
@@ -220,6 +247,16 @@ export function ModelLibrary({ diagnostic }: { diagnostic: DeviceDiagnostic | nu
           );
         })}
       </div>
+      {filteredModels.length === 0 ? (
+        <div className="model-library-empty">
+          <h3>No models match this view.</h3>
+          <p>
+            {filter === 'installed'
+              ? 'Download and verify a model to make it available offline.'
+              : 'No curated model installations currently need repair.'}
+          </p>
+        </div>
+      ) : null}
     </section>
   );
 }

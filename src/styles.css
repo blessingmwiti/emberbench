@@ -528,6 +528,50 @@ h2 {
   gap: 12px;
 }
 
+.model-library-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.model-library-filters button {
+  padding: 9px 13px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.model-library-filters button:hover,
+.model-library-filters button[aria-pressed='true'] {
+  border-color: var(--ember);
+  color: var(--cream);
+}
+
+.model-library-filters button[aria-pressed='true'] {
+  background: rgb(255 113 68 / 10%);
+}
+
+.model-library-empty {
+  padding: 42px;
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.model-library-empty h3 {
+  margin: 0 0 8px;
+  color: var(--cream);
+}
+
+.model-library-empty p {
+  margin: 0;
+}
+
 .model-library-summary {
   display: block;
   margin-top: 12px;
