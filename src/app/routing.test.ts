@@ -7,6 +7,7 @@ describe('application routing', () => {
     expect(parseAppRoute('#/models')).toBe('models');
     expect(parseAppRoute('#downloads')).toBe('downloads');
     expect(parseAppRoute('#/settings?from=downloads')).toBe('settings');
+    expect(parseAppRoute('#/code')).toBe('code');
     expect(parseAppRoute('#/unknown')).toBe('home');
     expect(parseAppRoute('')).toBe('home');
   });
@@ -14,5 +15,6 @@ describe('application routing', () => {
   it('creates static-hosting-safe route links', () => {
     expect(routeHref('home')).toBe('#/');
     expect(routeHref('models')).toBe('#/models');
+    expect(routeHref('code')).toBe('#/code');
   });
 });

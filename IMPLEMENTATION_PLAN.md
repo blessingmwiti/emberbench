@@ -491,15 +491,15 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Code Lab workspace
 
-- [ ] Add syntax-aware code input.
-- [ ] Add language selection and automatic hints.
-- [ ] Add Explain, Generate, Refactor, Debug, and Review modes.
+- [~] Add syntax-aware code input.
+- [x] Add language selection and automatic hints.
+- [x] Add Explain, Generate, Refactor, Debug, and Review modes.
 - [ ] Define mode-specific prompt recipes.
 - [ ] Render code and diffs legibly.
 - [ ] Copy generated code.
-- [ ] Preserve code sessions locally.
+- [x] Preserve code sessions locally.
 - [ ] Add input-size and context warnings.
-- [ ] Clearly state that output must be reviewed before execution.
+- [x] Clearly state that output must be reviewed before execution.
 
 ### Third MVP workspace
 
@@ -1130,4 +1130,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Add edit-and-resubmit support for prior user messages.
 - [x] Expose General Assistant generation settings in an advanced panel.
 - [x] Display the active General Assistant model and local-processing status.
-- [ ] Build the first Code Lab workspace shell on the shared session repository.
+- [x] Build the first Code Lab workspace shell on the shared session repository.
+- [ ] Select and validate a browser-compatible curated code model for Code Lab.

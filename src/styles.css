@@ -979,6 +979,193 @@ h2 {
   text-decoration: underline;
 }
 
+.code-workspace {
+  min-height: calc(100vh - 153px);
+  border-top: 0;
+}
+
+.code-lab-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  min-height: 720px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.code-lab-layout > aside {
+  padding: 20px;
+  border-right: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.code-lab-layout > aside > .button {
+  width: 100%;
+}
+
+.code-session-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 18px;
+}
+
+.code-session-list > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  border: 1px solid transparent;
+  border-radius: 4px;
+}
+
+.code-session-list > div.is-active {
+  border-color: var(--line);
+  background: var(--surface);
+}
+
+.code-session-list button {
+  min-width: 0;
+  padding: 10px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  text-align: left;
+}
+
+.code-session-list > div > button:last-child {
+  padding-inline: 8px;
+}
+
+.code-session-list strong,
+.code-session-list span {
+  display: block;
+}
+
+.code-session-list strong {
+  overflow: hidden;
+  color: var(--cream);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.code-session-list span {
+  margin-top: 4px;
+  font-size: 9px;
+}
+
+.code-lab-editor {
+  min-width: 0;
+  padding: 24px;
+}
+
+.code-mode-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 18px;
+}
+
+.code-mode-tabs button {
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.code-mode-tabs button[aria-pressed='true'] {
+  border-color: var(--ember);
+  background: rgb(255 113 68 / 10%);
+  color: var(--cream);
+}
+
+.code-editor-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 9px;
+}
+
+.code-editor-toolbar label,
+.code-editor-label {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.code-editor-toolbar select {
+  padding: 7px 28px 7px 9px;
+  border: 1px solid var(--line);
+  background: #110d0b;
+  color: var(--cream);
+}
+
+.code-editor-toolbar span {
+  margin-left: auto;
+  color: var(--muted);
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 9px;
+}
+
+.code-editor-label {
+  display: block;
+  margin: 16px 0 7px;
+}
+
+.code-lab-editor textarea {
+  width: 100%;
+  padding: 14px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  outline: none;
+  background: #110d0b;
+  color: var(--cream);
+  line-height: 1.6;
+}
+
+#code-source {
+  tab-size: 2;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 12px;
+  white-space: pre;
+}
+
+.code-lab-editor textarea:focus {
+  border-color: var(--ember);
+  box-shadow: 0 0 0 3px rgb(255 113 68 / 12%);
+}
+
+.code-lab-hint,
+.code-lab-review-note,
+.code-lab-warning {
+  margin: 12px 0 0;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.code-lab-hint {
+  color: var(--muted);
+}
+
+.code-lab-review-note {
+  color: var(--gold);
+}
+
+.code-lab-warning {
+  color: var(--ember-light);
+}
+
+.code-lab-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 18px;
+}
+
 .model-library-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -2227,6 +2414,15 @@ footer span:first-child {
   }
 
   .assistant-layout > aside {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .code-lab-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .code-lab-layout > aside {
     border-right: 0;
     border-bottom: 1px solid var(--line);
   }

@@ -17,6 +17,7 @@ import { SettingsPanel } from '../settings/SettingsPanel';
 import { reconcileInstallations } from '../storage/reconcile-installations';
 import { VisionModelLab } from '../vision-lab/VisionModelLab';
 import { AssistantWorkspace } from '../workspaces/AssistantWorkspace';
+import { CodeLabWorkspace } from '../workspaces/CodeLabWorkspace';
 import { routeHref, useAppRoute, type AppRoute } from './routing';
 
 const workspaces = [
@@ -30,7 +31,7 @@ const workspaces = [
     name: 'Code Lab',
     description: 'Explain, generate, refactor, debug, and review source code.',
     icon: '⌘',
-    route: null,
+    route: 'code' as const,
   },
   {
     name: 'Vision Desk',
@@ -379,6 +380,8 @@ export function App() {
         {route === 'settings' ? <SettingsPanel /> : null}
 
         {route === 'assistant' ? <AssistantWorkspace /> : null}
+
+        {route === 'code' ? <CodeLabWorkspace /> : null}
 
         {route === 'home' ? (
           <section className="section roadmap-section" id="roadmap">
