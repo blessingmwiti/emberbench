@@ -2,7 +2,7 @@ import type { ModelManifest, ModelPrecision } from '../../models/catalog/types';
 import type { TextModelWorkerEvent, TextModelWorkerRequest } from '../../model-lab/protocol';
 import { AsyncEventQueue } from '../core/async-event-queue';
 import { assertRunnableInput, requireLoadedRuntime } from '../core/contract';
-import { RuntimeError, toRuntimeError } from '../core/errors';
+import { RuntimeError, toDownloadRuntimeError, toRuntimeError } from '../core/errors';
 import { createRuntimeSession, transitionRuntimeSession } from '../core/session';
 import type {
   ModelInput,
@@ -298,9 +298,15 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
 
   private bindWorker() {
     this.worker.addEventListener('message', (event) => this.handleMessage(event.data));
-    this.worker.addEventListener('error', () => {
+    this.worker.addEventListener('error', (event) => {
       this.failPending(
-        new RuntimeError('INITIALIZATION_FAILED', 'The model worker stopped unexpectedly.'),
+        this.downloadQueue
+          ? toDownloadRuntimeError(
+              event instanceof ErrorEvent
+                ? (event.error ?? new Error(event.message))
+                : new Error('The model worker stopped unexpectedly.'),
+            )
+          : new RuntimeError('INITIALIZATION_FAILED', 'The model worker stopped unexpectedly.'),
       );
     });
   }
@@ -381,7 +387,9 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
         }
         break;
       case 'error': {
-        const error = toRuntimeError(new Error(message.message), 'INITIALIZATION_FAILED');
+        const error = this.downloadQueue
+          ? toDownloadRuntimeError(new Error(message.message))
+          : toRuntimeError(new Error(message.message), 'INITIALIZATION_FAILED');
         if (message.requestId && message.requestId === this.activeRequestId) {
           this.runQueue?.fail(error);
           this.finishRun('error');

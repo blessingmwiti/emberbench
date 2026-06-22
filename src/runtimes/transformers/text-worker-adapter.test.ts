@@ -157,6 +157,24 @@ describe('TransformersTextWorkerAdapter', () => {
     ]);
   });
 
+  it('maps model-host errors while downloading', async () => {
+    const worker = new FakeWorker();
+    const adapter = new TransformersTextWorkerAdapter(() => worker);
+    const events = collect(adapter.download(getTextManifest()));
+
+    worker.emit({ message: '403 Forbidden', type: 'error' });
+
+    const failure = await events.then(
+      () => null,
+      (error: unknown) => error,
+    );
+    expect(failure).toBeInstanceOf(RuntimeError);
+    expect(failure).toMatchObject({ code: 'DOWNLOAD_FAILED' });
+    expect((failure as RuntimeError).message).toContain(
+      'private, gated, or require authentication',
+    );
+  });
+
   it('deletes the pinned pipeline cache through the worker', async () => {
     const worker = new FakeWorker();
     const adapter = new TransformersTextWorkerAdapter(() => worker);

@@ -166,6 +166,8 @@ Active remote installations also listen for the browser moving offline. Connecti
 
 The in-app browser controller did not expose network emulation for this check, so the offline transition is currently verified by an integration test that dispatches the browser event and asserts abort, persistence, no retry, and lock release. A physical browser network-toggle test remains useful cross-browser validation.
 
+Download failures are now normalized before reaching the UI. Offline state, authentication or gated access, missing pinned artifacts, rate limits, server failures, and ambiguous fetch/CORS failures each receive specific guidance. Permanent 403/404-style failures no longer consume automatic retry attempts.
+
 ## Open feasibility risks
 
 - WebGPU device loss during active inference
@@ -178,4 +180,4 @@ The in-app browser controller did not expose network emulation for this check, s
 
 ## Next experiment
 
-Map server, HTTP, and CORS download failures to actionable errors.
+Show used and estimated available browser storage in Downloads.

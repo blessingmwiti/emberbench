@@ -13,7 +13,10 @@ function abortError() {
 function isRetriable(error: unknown) {
   if (error instanceof DOMException && error.name === 'AbortError') return false;
   if (!(error instanceof RuntimeError)) return true;
-  return ['DOWNLOAD_FAILED', 'INITIALIZATION_FAILED', 'DEVICE_LOST'].includes(error.code);
+  return (
+    error.recoverable &&
+    ['DOWNLOAD_FAILED', 'INITIALIZATION_FAILED', 'DEVICE_LOST'].includes(error.code)
+  );
 }
 
 function wait(milliseconds: number, signal?: AbortSignal) {

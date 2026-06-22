@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { findCuratedModel } from '../../models/catalog/registry';
 import type { VisionWorkerEvent, VisionWorkerRequest } from '../../vision-lab/protocol';
+import { RuntimeError } from '../core/errors';
 import { TransformersVisionWorkerAdapter } from './vision-worker-adapter';
 
 class FakeVisionWorker {
@@ -113,5 +114,21 @@ describe('TransformersVisionWorkerAdapter', () => {
       Math.round(encoder.sizeBytes / 2) /
         model.artifacts.reduce((sum, item) => sum + item.sizeBytes, 0),
     );
+  });
+
+  it('maps vision model-host failures while downloading', async () => {
+    const worker = new FakeVisionWorker();
+    const adapter = new TransformersVisionWorkerAdapter(() => worker);
+    const events = collect(adapter.download(manifest()));
+
+    worker.emit({ message: 'TypeError: Failed to fetch because of CORS', type: 'error' });
+
+    const failure = await events.then(
+      () => null,
+      (error: unknown) => error,
+    );
+    expect(failure).toBeInstanceOf(RuntimeError);
+    expect(failure).toMatchObject({ code: 'DOWNLOAD_FAILED', recoverable: true });
+    expect((failure as RuntimeError).message).toContain('cross-origin browser downloads');
   });
 });

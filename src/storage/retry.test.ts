@@ -7,7 +7,7 @@ describe('bounded retry', () => {
   it('retries transient failures and returns the successful result', async () => {
     const operation = vi
       .fn<(_: number) => Promise<string>>()
-      .mockRejectedValueOnce(new RuntimeError('DOWNLOAD_FAILED', 'network'))
+      .mockRejectedValueOnce(new RuntimeError('DOWNLOAD_FAILED', 'network', { recoverable: true }))
       .mockResolvedValue('done');
 
     await expect(withBoundedRetry(operation, { delaysMs: [0] })).resolves.toBe('done');
@@ -26,6 +26,14 @@ describe('bounded retry', () => {
       .mockRejectedValue(new RuntimeError('UNSUPPORTED_MODEL', 'unsupported'));
     await expect(withBoundedRetry(unsupported, { delaysMs: [0] })).rejects.toThrow('unsupported');
     expect(unsupported).toHaveBeenCalledTimes(1);
+
+    const permanentDownload = vi
+      .fn()
+      .mockRejectedValue(new RuntimeError('DOWNLOAD_FAILED', 'artifact not found'));
+    await expect(withBoundedRetry(permanentDownload, { delaysMs: [0] })).rejects.toThrow(
+      'artifact not found',
+    );
+    expect(permanentDownload).toHaveBeenCalledTimes(1);
   });
 
   it('awaits retry state persistence before the next attempt', async () => {
@@ -34,7 +42,9 @@ describe('bounded retry', () => {
       .fn<(_: number) => Promise<string>>()
       .mockImplementationOnce(() => {
         order.push('attempt-1');
-        return Promise.reject(new RuntimeError('DOWNLOAD_FAILED', 'network'));
+        return Promise.reject(
+          new RuntimeError('DOWNLOAD_FAILED', 'network', { recoverable: true }),
+        );
       })
       .mockImplementationOnce(() => {
         order.push('attempt-2');
