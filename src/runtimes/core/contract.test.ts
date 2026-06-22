@@ -45,6 +45,21 @@ describe('runtime contract', () => {
         },
       ),
     ).toThrow('image input cannot be empty');
+    expect(() =>
+      assertRunnableInput(
+        { kind: 'text', text: 'Hello' },
+        { maxNewTokens: 0, requestId: 'request-1' },
+      ),
+    ).toThrow('Maximum output tokens');
+    expect(() =>
+      assertRunnableInput(
+        { kind: 'text', text: 'Hello' },
+        { requestId: 'request-1', temperature: 3 },
+      ),
+    ).toThrow('Temperature');
+    expect(() =>
+      assertRunnableInput({ kind: 'text', text: 'Hello' }, { requestId: 'request-1', topP: 0 }),
+    ).toThrow('Top P');
   });
 
   it('creates immutable session transitions', () => {

@@ -21,6 +21,8 @@ export type TextModelWorkerRequest =
       maxNewTokens: number;
       prompt: string;
       requestId: string;
+      temperature: number;
+      topP: number;
       type: 'generate';
     }
   | {

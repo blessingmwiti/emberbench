@@ -74,8 +74,22 @@ describe('TransformersTextWorkerAdapter', () => {
     await expect(loaded).resolves.toMatchObject({ modelId: manifest.id, state: 'ready' });
 
     const eventsPromise = collect(
-      adapter.run({ kind: 'text', text: 'Hello' }, { maxNewTokens: 8, requestId: 'request-1' }),
+      adapter.run(
+        { kind: 'text', text: 'Hello' },
+        {
+          maxNewTokens: 8,
+          requestId: 'request-1',
+          temperature: 0.7,
+          topP: 0.9,
+        },
+      ),
     );
+    expect(worker.requests.at(-1)).toMatchObject({
+      maxNewTokens: 8,
+      temperature: 0.7,
+      topP: 0.9,
+      type: 'generate',
+    });
     worker.emit({ requestId: 'request-1', text: ' world', type: 'token' });
     worker.emit({
       durationMs: 12,

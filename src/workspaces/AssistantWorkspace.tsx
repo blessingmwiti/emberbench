@@ -6,8 +6,10 @@ import { TransformersTextWorkerAdapter } from '../runtimes/transformers/text-wor
 import { resolveTransformersRuntimeDevice } from '../runtimes/transformers/runtime-device';
 import {
   appSettings,
+  DEFAULT_ASSISTANT_GENERATION_SETTINGS,
   WORKSPACE_SESSIONS_CHANGED_EVENT,
   workspaceSessions,
+  type AssistantGenerationSettings,
 } from '../storage/database';
 import { installModel } from '../storage/install-model';
 import {
@@ -36,6 +38,7 @@ function conversationPrompt(session: WorkspaceSession) {
 export function AssistantWorkspace() {
   const adapterRef = useRef<TransformersTextWorkerAdapter | null>(null);
   const requestRef = useRef<string | null>(null);
+  const settingsWriteRef = useRef(Promise.resolve());
   const [sessions, setSessions] = useState<WorkspaceSession[]>([]);
   const [session, setSession] = useState<WorkspaceSession | null>(null);
   const [draft, setDraft] = useState('');
@@ -47,6 +50,9 @@ export function AssistantWorkspace() {
   const [renameTitle, setRenameTitle] = useState('');
   const [editMessageId, setEditMessageId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
+  const [generationSettings, setGenerationSettings] = useState<AssistantGenerationSettings>(
+    DEFAULT_ASSISTANT_GENERATION_SETTINGS,
+  );
 
   useEffect(() => {
     let active = true;
@@ -75,6 +81,10 @@ export function AssistantWorkspace() {
       window.removeEventListener(WORKSPACE_SESSIONS_CHANGED_EVENT, refresh);
       adapterRef.current?.terminate();
     };
+  }, []);
+
+  useEffect(() => {
+    void appSettings.get().then((settings) => setGenerationSettings(settings.assistantGeneration));
   }, []);
 
   async function ensureReady() {
@@ -107,7 +117,12 @@ export function AssistantWorkspace() {
       let reply = '';
       for await (const event of adapter.run(
         { kind: 'text', text: conversationPrompt(activeSession) },
-        { maxNewTokens: 128, requestId },
+        {
+          maxNewTokens: generationSettings.maxNewTokens,
+          requestId,
+          temperature: generationSettings.temperature,
+          topP: generationSettings.topP,
+        },
       )) {
         if (requestRef.current !== requestId) continue;
         if (event.type === 'token') {
@@ -202,6 +217,18 @@ export function AssistantWorkspace() {
     } catch {
       setNotice('This browser did not allow clipboard access.');
     }
+  }
+
+  function saveGenerationSettings(next: AssistantGenerationSettings) {
+    setGenerationSettings(next);
+    settingsWriteRef.current = settingsWriteRef.current
+      .then(async () => {
+        const settings = await appSettings.get();
+        await appSettings.put({ ...settings, assistantGeneration: next });
+      })
+      .catch(() => {
+        setError('Generation settings could not be saved locally.');
+      });
   }
 
   async function stopReply() {
@@ -431,6 +458,69 @@ export function AssistantWorkspace() {
               )}
               <span>{status === 'error' ? 'Needs attention' : status}</span>
             </div>
+            <details className="assistant-generation-settings">
+              <summary>Advanced generation</summary>
+              <div>
+                <label htmlFor="assistant-max-tokens">
+                  Maximum output tokens
+                  <select
+                    disabled={busy}
+                    id="assistant-max-tokens"
+                    onChange={(event) =>
+                      saveGenerationSettings({
+                        ...generationSettings,
+                        maxNewTokens: Number(event.target.value),
+                      })
+                    }
+                    value={generationSettings.maxNewTokens}
+                  >
+                    <option value="64">64</option>
+                    <option value="128">128</option>
+                    <option value="256">256</option>
+                    <option value="512">512</option>
+                  </select>
+                </label>
+                <label htmlFor="assistant-temperature">
+                  Temperature
+                  <select
+                    disabled={busy}
+                    id="assistant-temperature"
+                    onChange={(event) =>
+                      saveGenerationSettings({
+                        ...generationSettings,
+                        temperature: Number(event.target.value),
+                      })
+                    }
+                    value={generationSettings.temperature}
+                  >
+                    <option value="0">Deterministic · 0.0</option>
+                    <option value="0.4">Balanced · 0.4</option>
+                    <option value="0.8">Creative · 0.8</option>
+                    <option value="1.2">Exploratory · 1.2</option>
+                  </select>
+                </label>
+                <label htmlFor="assistant-top-p">
+                  Top P
+                  <select
+                    disabled={busy}
+                    id="assistant-top-p"
+                    onChange={(event) =>
+                      saveGenerationSettings({
+                        ...generationSettings,
+                        topP: Number(event.target.value),
+                      })
+                    }
+                    value={generationSettings.topP}
+                  >
+                    <option value="1">Open · 1.00</option>
+                    <option value="0.95">Focused · 0.95</option>
+                    <option value="0.9">Tighter · 0.90</option>
+                    <option value="0.8">Narrow · 0.80</option>
+                  </select>
+                </label>
+              </div>
+              <p>Temperature 0 is deterministic. Higher values increase variation.</p>
+            </details>
           </div>
           {error ? (
             <p className="assistant-error" role="alert">

@@ -271,6 +271,8 @@ export class TransformersTextWorkerAdapter implements ModelRuntimeAdapter {
       maxNewTokens: options.maxNewTokens ?? 64,
       prompt: input.text,
       requestId: options.requestId,
+      temperature: options.temperature ?? 0,
+      topP: options.topP ?? 1,
       type: 'generate',
     });
     yield* queue;

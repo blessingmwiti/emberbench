@@ -194,7 +194,20 @@ export class InstalledModelRepository {
 
 export const installedModels = new InstalledModelRepository();
 
+export interface AssistantGenerationSettings {
+  maxNewTokens: number;
+  temperature: number;
+  topP: number;
+}
+
+export const DEFAULT_ASSISTANT_GENERATION_SETTINGS: AssistantGenerationSettings = {
+  maxNewTokens: 128,
+  temperature: 0,
+  topP: 1,
+};
+
 export interface AppSettings {
+  assistantGeneration: AssistantGenerationSettings;
   confirmLargeDownloads: boolean;
   defaultCachedFilesOnly: boolean;
   id: 'app';
@@ -203,6 +216,7 @@ export interface AppSettings {
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
+  assistantGeneration: DEFAULT_ASSISTANT_GENERATION_SETTINGS,
   confirmLargeDownloads: true,
   defaultCachedFilesOnly: false,
   id: 'app',
@@ -223,8 +237,23 @@ export function parseAppSettings(value: unknown): AppSettings | null {
   }
   const runtimePreference = settings.runtimePreference ?? 'auto';
   if (!['auto', 'webgpu', 'wasm'].includes(runtimePreference)) return null;
+  const assistantGeneration = settings.assistantGeneration ?? DEFAULT_ASSISTANT_GENERATION_SETTINGS;
+  if (
+    !Number.isInteger(assistantGeneration.maxNewTokens) ||
+    assistantGeneration.maxNewTokens < 1 ||
+    assistantGeneration.maxNewTokens > 512 ||
+    !Number.isFinite(assistantGeneration.temperature) ||
+    assistantGeneration.temperature < 0 ||
+    assistantGeneration.temperature > 2 ||
+    !Number.isFinite(assistantGeneration.topP) ||
+    assistantGeneration.topP <= 0 ||
+    assistantGeneration.topP > 1
+  ) {
+    return null;
+  }
   return {
     ...settings,
+    assistantGeneration,
     runtimePreference,
   } as AppSettings;
 }

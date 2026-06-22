@@ -866,6 +866,48 @@ h2 {
   text-transform: uppercase;
 }
 
+.assistant-generation-settings {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.assistant-generation-settings summary {
+  width: fit-content;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.assistant-generation-settings > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.assistant-generation-settings label {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.assistant-generation-settings input,
+.assistant-generation-settings select {
+  width: 100%;
+  margin-top: 6px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: #110d0b;
+  color: var(--cream);
+}
+
+.assistant-generation-settings > p {
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+}
+
 .assistant-error {
   margin: 0;
   padding: 12px 20px;

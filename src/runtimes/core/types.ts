@@ -35,6 +35,8 @@ export type ModelInput =
 export interface RuntimeRunOptions {
   maxNewTokens?: number;
   requestId: string;
+  temperature?: number;
+  topP?: number;
 }
 
 export interface RuntimeCacheStatus {
