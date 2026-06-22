@@ -170,4 +170,4 @@ An explicit runtime probe then downloaded the pinned SmolLM2 revision, initializ
 
 ## Next experiment
 
-Add queued download coordination and duplicate-download prevention.
+Add download cancellation and bounded retry handling.

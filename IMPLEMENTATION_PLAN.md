@@ -366,7 +366,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Download manager
 
-- [ ] Implement queued downloads.
+- [x] Implement queued downloads.
 - [ ] Implement per-file and overall progress.
 - [ ] Implement cancellation.
 - [ ] Implement retry with bounded backoff.
@@ -376,7 +376,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [x] Warn about metered or very large downloads where detectable.
 - [ ] Handle offline transitions during download.
 - [ ] Handle server and CORS failures.
-- [ ] Prevent two downloads from writing the same model simultaneously.
+- [x] Prevent two downloads from writing the same model simultaneously.
 
 ### Storage interface
 
@@ -1106,4 +1106,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Add storage preflight checks before model downloads.
 - [x] Add model-installation repair and stale-record reconciliation.
 - [x] Add settings persistence and a full local-data reset flow.
-- [ ] Add queued download coordination and duplicate-download prevention.
+- [x] Add queued download coordination and duplicate-download prevention.
+- [ ] Add download cancellation and bounded retry handling.

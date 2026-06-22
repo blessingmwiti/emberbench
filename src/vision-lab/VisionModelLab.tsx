@@ -14,6 +14,7 @@ import {
   SETTINGS_CHANGED_EVENT,
 } from '../storage/database';
 import { runDownloadPreflight } from '../storage/download-preflight';
+import { modelDownloads, type DownloadLease } from '../storage/download-coordinator';
 
 type VisionStatus = 'idle' | 'loading' | 'ready' | 'running' | 'cancelling' | 'error';
 
@@ -57,6 +58,7 @@ export function VisionModelLab() {
   const [storageMessage, setStorageMessage] = useState<string | null>(null);
   const [downloadWarning, setDownloadWarning] = useState<string | null>(null);
   const [confirmLargeDownloads, setConfirmLargeDownloads] = useState(true);
+  const [downloadQueueMessage, setDownloadQueueMessage] = useState<string | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -178,6 +180,23 @@ export function VisionModelLab() {
     setDownloadWarning(null);
     const adapter = ensureAdapter();
     const startedAt = performance.now();
+    let downloadLease: DownloadLease | null = null;
+    if (!cachedFilesOnly) {
+      setError(null);
+      setProgress(0);
+      setStatus('loading');
+      setDownloadQueueMessage('Waiting for the model download slot…');
+      try {
+        downloadLease = await modelDownloads.acquire(visionModel.id);
+        setDownloadQueueMessage(null);
+      } catch (queueError) {
+        setError(errorMessage(queueError, 'The vision model download could not be queued.'));
+        setStatus('error');
+        setDownloadQueueMessage(null);
+        return;
+      }
+    }
+
     let record = beginRecord(
       await installedModels.get(visionModel.id).catch(() => installRecord),
       cachedFilesOnly ? 'verifying' : 'downloading',
@@ -232,6 +251,9 @@ export function VisionModelLab() {
         setError(errorMessage(loadError, 'Vision model loading failed.'));
         setStatus('error');
       }
+    } finally {
+      downloadLease?.release();
+      if (mountedRef.current) setDownloadQueueMessage(null);
     }
   }
 
@@ -426,7 +448,8 @@ export function VisionModelLab() {
             ) : null}
             {status === 'loading' ? (
               <button className="button button--primary" disabled type="button">
-                Loading {progress === null ? '' : `${progress.toFixed(0)}%`}
+                {downloadQueueMessage ??
+                  `Loading ${progress === null ? '' : `${progress.toFixed(0)}%`}`}
               </button>
             ) : null}
             {status === 'ready' ? (

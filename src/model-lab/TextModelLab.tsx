@@ -11,6 +11,7 @@ import {
   SETTINGS_CHANGED_EVENT,
 } from '../storage/database';
 import { runDownloadPreflight } from '../storage/download-preflight';
+import { modelDownloads, type DownloadLease } from '../storage/download-coordinator';
 import type { RuntimeCacheStatus, RuntimeEvent } from '../runtimes/core/types';
 import { RuntimeError } from '../runtimes/core/errors';
 import { TransformersTextWorkerAdapter } from '../runtimes/transformers/text-worker-adapter';
@@ -67,6 +68,7 @@ export function TextModelLab() {
   const [storageMessage, setStorageMessage] = useState<string | null>(null);
   const [downloadWarning, setDownloadWarning] = useState<string | null>(null);
   const [confirmLargeDownloads, setConfirmLargeDownloads] = useState(true);
+  const [downloadQueueMessage, setDownloadQueueMessage] = useState<string | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -183,6 +185,23 @@ export function TextModelLab() {
     setDownloadWarning(null);
     const adapter = ensureAdapter();
     const startedAt = performance.now();
+    let downloadLease: DownloadLease | null = null;
+    if (!cachedFilesOnly) {
+      setError(null);
+      setProgress(0);
+      setStatus('loading');
+      setDownloadQueueMessage('Waiting for the model download slot…');
+      try {
+        downloadLease = await modelDownloads.acquire(textModel.id);
+        setDownloadQueueMessage(null);
+      } catch (queueError) {
+        setError(displayRuntimeError(queueError, 'The model download could not be queued.'));
+        setStatus('error');
+        setDownloadQueueMessage(null);
+        return;
+      }
+    }
+
     let record = beginInstallRecord(
       await installedModels.get(textModel.id).catch(() => installRecord),
       cachedFilesOnly ? 'verifying' : 'downloading',
@@ -245,6 +264,9 @@ export function TextModelLab() {
         setError(displayRuntimeError(loadError, 'Model loading failed.'));
         setStatus('error');
       }
+    } finally {
+      downloadLease?.release();
+      if (mountedRef.current) setDownloadQueueMessage(null);
     }
   }
 
@@ -372,7 +394,8 @@ export function TextModelLab() {
             ) : null}
             {status === 'loading' ? (
               <button className="button button--primary" disabled type="button">
-                Loading {progress === null ? '' : `${progress.toFixed(0)}%`}
+                {downloadQueueMessage ??
+                  `Loading ${progress === null ? '' : `${progress.toFixed(0)}%`}`}
               </button>
             ) : null}
             {status === 'ready' ? (
