@@ -174,6 +174,8 @@ The Models route now includes All, Offline ready, and Needs attention views. Cur
 
 Runtime adapters now recognize WebGPU device-loss signatures during model preparation and active inference. Pending work fails with a recoverable `DEVICE_LOST` code, the runtime session enters an error state, and the UI receives guidance to reload, reduce GPU pressure, or choose a smaller model. Real hardware-triggered device loss remains a cross-browser validation item.
 
+Direct worker tests now execute the worker modules with a mocked Transformers.js boundary. They verify pinned text configuration, WebGPU selection, progress-before-ready messages, and structured vision load errors in addition to the adapter contract suite.
+
 ## Open feasibility risks
 
 - Real browser propagation of WebGPU device loss during active inference
@@ -186,4 +188,4 @@ Runtime adapters now recognize WebGPU device-loss signatures during model prepar
 
 ## Next experiment
 
-Add direct worker-protocol tests for text and vision workers.
+Implement runtime discovery and practical WebAssembly fallback rules.

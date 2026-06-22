@@ -409,7 +409,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [x] Handle worker startup failure.
 - [x] Handle worker crashes.
 - [x] Handle stale events from cancelled or replaced requests.
-- [ ] Add worker-protocol tests.
+- [x] Add worker-protocol tests.
 
 ### Runtime adapter
 
@@ -423,8 +423,8 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [x] Implement cancellation.
 - [x] Implement unload and cleanup.
 - [x] Handle WebGPU device loss.
-- [ ] Map raw errors to Emberbench error codes.
-- [ ] Add runtime contract tests.
+- [x] Map raw errors to Emberbench error codes.
+- [x] Add runtime contract tests.
 
 ### Runtime manager
 
@@ -1119,4 +1119,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Show used and estimated available browser storage in Downloads.
 - [x] Add an Installed Models view with offline-ready and repair filters.
 - [x] Handle WebGPU device loss during model load and inference.
-- [ ] Add direct worker-protocol tests for text and vision workers.
+- [x] Add direct worker-protocol tests for text and vision workers.
+- [ ] Implement runtime discovery and practical WebAssembly fallback rules.
