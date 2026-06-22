@@ -361,8 +361,8 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [ ] Track available hashes, ETags, or revision metadata.
 - [ ] Verify all required artifacts before marking a model installed.
 - [x] Implement deletion.
-- [ ] Implement installation verification.
-- [ ] Implement installation repair.
+- [x] Implement installation verification.
+- [~] Implement installation repair.
 
 ### Download manager
 
@@ -1104,4 +1104,5 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Add model deletion with cache and metadata cleanup for the text runtime.
 - [x] Add equivalent cache lifecycle support to the vision runtime adapter.
 - [x] Add storage preflight checks before model downloads.
-- [ ] Add model-installation repair and stale-record reconciliation.
+- [x] Add model-installation repair and stale-record reconciliation.
+- [ ] Add settings persistence and a full local-data reset flow.

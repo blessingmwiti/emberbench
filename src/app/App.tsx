@@ -11,6 +11,7 @@ import { ModelImporter } from '../models/importer/ModelImporter';
 import { ModelLibrary } from '../models/catalog/ModelLibrary';
 import { TextModelLab } from '../model-lab/TextModelLab';
 import { PwaStatus } from '../pwa/PwaStatus';
+import { reconcileInstallations } from '../storage/reconcile-installations';
 import { VisionModelLab } from '../vision-lab/VisionModelLab';
 
 const workspaces = [
@@ -40,6 +41,7 @@ export function App() {
   const [status, setStatus] = useState<DiagnosticStatus>('idle');
   const [persistenceMessage, setPersistenceMessage] = useState<string | null>(null);
   const [requestingPersistence, setRequestingPersistence] = useState(false);
+  const [reconciliationMessage, setReconciliationMessage] = useState<string | null>(null);
 
   const runDiagnostics = useCallback(async () => {
     setStatus('running');
@@ -56,6 +58,29 @@ export function App() {
   useEffect(() => {
     void runDiagnostics();
   }, [runDiagnostics]);
+
+  useEffect(() => {
+    let active = true;
+    void reconcileInstallations()
+      .then((summary) => {
+        if (!active || summary.checked === 0) return;
+        setReconciliationMessage(
+          summary.stale > 0
+            ? `${summary.stale} local model installation needs repair.`
+            : summary.repaired > 0
+              ? `${summary.repaired} interrupted model installation was recovered.`
+              : `${summary.checked} local model installation${summary.checked === 1 ? '' : 's'} verified.`,
+        );
+      })
+      .catch(() => {
+        if (active) {
+          setReconciliationMessage('Local model installation records could not be verified.');
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const persistStorage = useCallback(async () => {
     setRequestingPersistence(true);
@@ -198,6 +223,11 @@ export function App() {
             {persistenceMessage ? (
               <p className="storage-message" role="status">
                 {persistenceMessage}
+              </p>
+            ) : null}
+            {reconciliationMessage ? (
+              <p className="storage-message" role="status">
+                {reconciliationMessage}
               </p>
             ) : null}
           </div>

@@ -9,8 +9,7 @@ import {
 import type { DeviceDiagnostic } from '../../diagnostics/types';
 import type { InstalledModel, ModelManifest } from './types';
 import { transitionInstalledModel } from '../installed-model';
-import { TransformersTextWorkerAdapter } from '../../runtimes/transformers/text-worker-adapter';
-import { TransformersVisionWorkerAdapter } from '../../runtimes/transformers/vision-worker-adapter';
+import { createRuntimeAdapter } from '../../runtimes/create-runtime-adapter';
 import { INSTALLED_MODELS_CHANGED_EVENT, installedModels } from '../../storage/database';
 import { getCuratedModels, getModelDownloadSize } from './registry';
 
@@ -81,10 +80,7 @@ export function ModelLibrary({ diagnostic }: { diagnostic: DeviceDiagnostic | nu
   ).length;
 
   async function removeLocalModel(model: ModelManifest, installation: InstalledModel) {
-    const adapter =
-      model.requirements.task === 'image-to-text'
-        ? new TransformersVisionWorkerAdapter()
-        : new TransformersTextWorkerAdapter();
+    const adapter = createRuntimeAdapter(model);
     setRemovingModelId(model.id);
     setRemovalError(null);
 

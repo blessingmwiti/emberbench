@@ -225,11 +225,20 @@ async function unload() {
 }
 
 async function inspectCache(config: ResolvedWorkerConfig) {
-  const status = await ModelRegistry.is_pipeline_cached_files('text-generation', config.modelId, {
-    device: 'webgpu',
-    dtype: config.dtype,
-    revision: config.revision,
-  });
+  const previousBlockRemoteModelRequests = blockRemoteModelRequests;
+  blockRemoteModelRequests = true;
+  let status;
+  try {
+    status = await ModelRegistry.is_pipeline_cached_files('text-generation', config.modelId, {
+      device: 'webgpu',
+      dtype: config.dtype,
+      revision: config.revision,
+    });
+  } catch {
+    status = { allCached: false, files: [] };
+  } finally {
+    blockRemoteModelRequests = previousBlockRemoteModelRequests;
+  }
 
   post({
     cached: status.allCached,
@@ -248,47 +257,53 @@ async function deleteCache(config: ResolvedWorkerConfig) {
     await unload();
   }
 
+  const previousBlockRemoteModelRequests = blockRemoteModelRequests;
+  blockRemoteModelRequests = true;
   const options = {
     device: 'webgpu',
     dtype: config.dtype,
     revision: config.revision,
   } as const;
-  const before = await ModelRegistry.is_pipeline_cached_files(
-    'text-generation',
-    config.modelId,
-    options,
-  );
-  await ModelRegistry.clear_pipeline_cache('text-generation', config.modelId, options);
-
-  if (typeof caches !== 'undefined') {
-    const cache = await caches.open(env.cacheKey);
-    await Promise.all(
-      before.files.map(async ({ file }) => {
-        const remoteUrl = new URL(
-          `${config.modelId}/resolve/${encodeURIComponent(config.revision)}/${file}`,
-          env.remoteHost,
-        ).href;
-        const localUrl = new URL(
-          `${env.localModelPath}${config.modelId}/${file}`,
-          scope.location.origin,
-        ).href;
-        await Promise.all([cache.delete(remoteUrl), cache.delete(localUrl)]);
-      }),
+  try {
+    const before = await ModelRegistry.is_pipeline_cached_files(
+      'text-generation',
+      config.modelId,
+      options,
     );
-  }
+    await ModelRegistry.clear_pipeline_cache('text-generation', config.modelId, options);
 
-  const after = await ModelRegistry.is_pipeline_cached_files(
-    'text-generation',
-    config.modelId,
-    options,
-  );
-  const filesCached = before.files.filter((file) => file.cached).length;
-  const filesRemaining = after.files.filter((file) => file.cached).length;
-  post({
-    filesCached,
-    filesDeleted: filesCached - filesRemaining,
-    type: 'cache-deleted',
-  });
+    if (typeof caches !== 'undefined') {
+      const cache = await caches.open(env.cacheKey);
+      await Promise.all(
+        before.files.map(async ({ file }) => {
+          const remoteUrl = new URL(
+            `${config.modelId}/resolve/${encodeURIComponent(config.revision)}/${file}`,
+            env.remoteHost,
+          ).href;
+          const localUrl = new URL(
+            `${env.localModelPath}${config.modelId}/${file}`,
+            scope.location.origin,
+          ).href;
+          await Promise.all([cache.delete(remoteUrl), cache.delete(localUrl)]);
+        }),
+      );
+    }
+
+    const after = await ModelRegistry.is_pipeline_cached_files(
+      'text-generation',
+      config.modelId,
+      options,
+    );
+    const filesCached = before.files.filter((file) => file.cached).length;
+    const filesRemaining = after.files.filter((file) => file.cached).length;
+    post({
+      filesCached,
+      filesDeleted: filesCached - filesRemaining,
+      type: 'cache-deleted',
+    });
+  } finally {
+    blockRemoteModelRequests = previousBlockRemoteModelRequests;
+  }
 }
 
 scope.addEventListener('message', (event: MessageEvent<TextModelWorkerRequest>) => {
