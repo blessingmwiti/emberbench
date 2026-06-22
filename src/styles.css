@@ -799,6 +799,52 @@ h2 {
   white-space: pre;
 }
 
+.markdown-code-block {
+  position: relative;
+  padding-top: 34px !important;
+}
+
+.markdown-code-block::before {
+  position: absolute;
+  top: 9px;
+  right: 12px;
+  color: var(--muted);
+  content: attr(data-language);
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.markdown-code-block--diff code {
+  display: block;
+}
+
+.markdown-diff-line {
+  display: block;
+  min-width: max-content;
+  padding-inline: 8px;
+  white-space: pre;
+}
+
+.markdown-diff-line--addition {
+  background: rgb(92 166 106 / 16%);
+  color: #b7e8c0;
+}
+
+.markdown-diff-line--removal {
+  background: rgb(215 86 75 / 14%);
+  color: #ffb0a7;
+}
+
+.markdown-diff-line--hunk {
+  color: #c4b3ff;
+}
+
+.markdown-diff-line--metadata {
+  color: var(--gold);
+}
+
 .assistant-message__content a {
   color: var(--ember-light);
   text-decoration: underline;

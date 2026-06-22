@@ -51,4 +51,31 @@ describe('MarkdownContent', () => {
     expect(container.querySelector('img')).toBeNull();
     expect(container).toHaveTextContent('<img src=x onerror="alert(1)">');
   });
+
+  it('classifies diff lines without treating markers as markup', () => {
+    const { container } = render(
+      <MarkdownContent
+        content={[
+          '```diff',
+          '--- a/file.ts',
+          '+++ b/file.ts',
+          '@@ -1 +1 @@',
+          '-const mode = "cloud";',
+          '+const mode = "local";',
+          ' context();',
+          '```',
+        ].join('\n')}
+      />,
+    );
+
+    expect(container.querySelector('pre')).toHaveAttribute('data-language', 'diff');
+    expect(container.querySelectorAll('.markdown-diff-line--metadata')).toHaveLength(2);
+    expect(container.querySelector('.markdown-diff-line--hunk')).toHaveTextContent('@@ -1 +1 @@');
+    expect(container.querySelector('.markdown-diff-line--removal')).toHaveTextContent(
+      '-const mode = "cloud";',
+    );
+    expect(container.querySelector('.markdown-diff-line--addition')).toHaveTextContent(
+      '+const mode = "local";',
+    );
+  });
 });
