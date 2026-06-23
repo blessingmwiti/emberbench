@@ -33,6 +33,12 @@ import {
   type CodeLabMode,
 } from './code-lab-draft';
 import { copyText } from './clipboard';
+import {
+  codeCursorPosition,
+  indentCodeSelection,
+  insertIndentedNewline,
+  type CodeEditorEdit,
+} from './code-editor-edit';
 import { MarkdownContent } from './MarkdownContent';
 
 const curatedCodeModel = findCuratedModel('qwen2.5-coder-0.5b-q4');
@@ -57,6 +63,7 @@ function sessionDraft(session: WorkspaceSession) {
 export function CodeLabWorkspace() {
   const adapterRef = useRef<TransformersTextWorkerAdapter | null>(null);
   const requestRef = useRef<string | null>(null);
+  const sourceRef = useRef<HTMLTextAreaElement | null>(null);
   const [sessions, setSessions] = useState<WorkspaceSession[]>([]);
   const [session, setSession] = useState<WorkspaceSession | null>(null);
   const [draft, setDraft] = useState<CodeLabDraft>(EMPTY_CODE_LAB_DRAFT);
@@ -65,6 +72,7 @@ export function CodeLabWorkspace() {
   const [streamingText, setStreamingText] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'running' | 'error'>('idle');
   const [runtimeDevice, setRuntimeDevice] = useState<TransformersRuntimeDevice | null>(null);
+  const [cursorPosition, setCursorPosition] = useState({ column: 1, line: 1 });
 
   useEffect(() => {
     let active = true;
@@ -230,6 +238,14 @@ export function CodeLabWorkspace() {
     }
   }
 
+  function applyCodeEdit(edit: CodeEditorEdit) {
+    setDraft((current) => ({ ...current, code: edit.value }));
+    setCursorPosition(codeCursorPosition(edit.value, edit.selectionStart));
+    requestAnimationFrame(() => {
+      sourceRef.current?.setSelectionRange(edit.selectionStart, edit.selectionEnd);
+    });
+  }
+
   async function deleteSession(item: WorkspaceSession) {
     await workspaceSessions.delete(item.id);
     if (session?.id === item.id) {
@@ -362,7 +378,10 @@ export function CodeLabWorkspace() {
                 </option>
               ))}
             </select>
-            <span>{sourceLength.toLocaleString()} characters</span>
+            <span>
+              Ln {cursorPosition.line} · Col {cursorPosition.column} ·{' '}
+              {sourceLength.toLocaleString()} chars
+            </span>
           </div>
 
           <label className="code-editor-label" htmlFor="code-source">
@@ -373,8 +392,40 @@ export function CodeLabWorkspace() {
             autoCorrect="off"
             data-language={draft.language}
             id="code-source"
-            onChange={(event) => setDraft((current) => ({ ...current, code: event.target.value }))}
+            onChange={(event) => {
+              setDraft((current) => ({ ...current, code: event.target.value }));
+              setCursorPosition(
+                codeCursorPosition(event.target.value, event.target.selectionStart),
+              );
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Tab') {
+                event.preventDefault();
+                applyCodeEdit(
+                  indentCodeSelection(
+                    draft.code,
+                    event.currentTarget.selectionStart,
+                    event.currentTarget.selectionEnd,
+                    event.shiftKey,
+                  ),
+                );
+              } else if (event.key === 'Enter') {
+                event.preventDefault();
+                applyCodeEdit(
+                  insertIndentedNewline(
+                    draft.code,
+                    event.currentTarget.selectionStart,
+                    event.currentTarget.selectionEnd,
+                    draft.language,
+                  ),
+                );
+              }
+            }}
+            onSelect={(event) =>
+              setCursorPosition(codeCursorPosition(draft.code, event.currentTarget.selectionStart))
+            }
             placeholder="Paste code here, or leave this blank when generating from instructions…"
+            ref={sourceRef}
             rows={18}
             spellCheck={false}
             value={draft.code}
