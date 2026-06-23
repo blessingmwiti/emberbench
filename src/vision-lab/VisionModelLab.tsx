@@ -19,6 +19,7 @@ import {
 } from '../storage/database';
 import { runDownloadPreflight } from '../storage/download-preflight';
 import { installModel } from '../storage/install-model';
+import { validateVisionImageFile, VISION_IMAGE_ACCEPT_ATTRIBUTE } from './input-validation';
 
 type VisionStatus = 'idle' | 'loading' | 'ready' | 'running' | 'cancelling' | 'error';
 
@@ -289,8 +290,9 @@ export function VisionModelLab() {
 
   function selectImage(file: File | undefined) {
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      setError('Choose an image file.');
+    const validation = validateVisionImageFile(file);
+    if (!validation.valid) {
+      setError(validation.message);
       return;
     }
     setError(null);
@@ -426,12 +428,15 @@ export function VisionModelLab() {
             <label className="button button--quiet file-button">
               Choose image
               <input
-                accept="image/*"
+                accept={VISION_IMAGE_ACCEPT_ATTRIBUTE}
                 disabled={status === 'running' || status === 'cancelling'}
                 onChange={(event) => selectImage(event.target.files?.[0])}
                 type="file"
               />
             </label>
+            <p className="vision-input-limits">
+              PNG, JPEG, or WebP up to 12 MiB. Images are decoded locally before inference.
+            </p>
             {!ready && status !== 'loading' ? (
               <button
                 className="button button--primary"

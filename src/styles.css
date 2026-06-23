@@ -2232,6 +2232,14 @@ h2 {
   opacity: 0;
 }
 
+.vision-input-limits {
+  flex-basis: 100%;
+  margin: -4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .vision-result blockquote {
   min-height: 180px;
   margin: 24px 0;

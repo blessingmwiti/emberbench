@@ -504,7 +504,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 ### Third MVP workspace
 
 - [x] Build the selected Vision Desk interface.
-- [ ] Validate accepted input formats and size limits.
+- [x] Validate accepted input formats and size limits.
 - [ ] Perform preprocessing locally.
 - [ ] Display progress during inference.
 - [ ] Render structured task output.
