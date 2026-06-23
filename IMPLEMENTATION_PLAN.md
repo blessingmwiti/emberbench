@@ -491,7 +491,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Code Lab workspace
 
-- [~] Add syntax-aware code input.
+- [x] Add syntax-aware code input.
 - [x] Add language selection and automatic hints.
 - [x] Add Explain, Generate, Refactor, Debug, and Review modes.
 - [x] Define mode-specific prompt recipes.
@@ -503,10 +503,10 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Third MVP workspace
 
-- [ ] Build the selected Vision Desk or Transcription Studio interface.
-- [ ] Validate accepted input formats and size limits.
-- [ ] Perform preprocessing locally.
-- [ ] Display progress during inference.
+- [x] Build the selected Vision Desk interface.
+- [x] Validate accepted input formats and size limits.
+- [x] Perform preprocessing locally.
+- [x] Display progress during inference.
 - [ ] Render structured task output.
 - [ ] Persist session metadata without duplicating large user files unnecessarily.
 - [ ] Provide clear deletion controls.
@@ -1133,5 +1133,6 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Build the first Code Lab workspace shell on the shared session repository.
 - [x] Select and validate a browser-compatible curated code model for Code Lab.
 - [x] Install and run the pinned Qwen2.5-Coder 0.5B q4 model in a real browser probe.
-- [~] Add syntax highlighting and dedicated diff rendering to Code Lab.
-- [ ] Complete dependency-free syntax highlighting and editor indentation support.
+- [x] Add syntax highlighting and dedicated diff rendering to Code Lab.
+- [x] Complete dependency-free editor indentation support.
+- [x] Add dependency-free syntax highlighting to the Code Lab source editor.

@@ -37,7 +37,7 @@ const workspaces = [
     name: 'Vision Desk',
     description: 'Understand images, extract text, and answer visual questions.',
     icon: '◉',
-    route: null,
+    route: 'vision' as const,
   },
 ];
 
@@ -382,6 +382,8 @@ export function App() {
         {route === 'assistant' ? <AssistantWorkspace /> : null}
 
         {route === 'code' ? <CodeLabWorkspace /> : null}
+
+        {route === 'vision' ? <VisionModelLab /> : null}
 
         {route === 'home' ? (
           <section className="section roadmap-section" id="roadmap">
