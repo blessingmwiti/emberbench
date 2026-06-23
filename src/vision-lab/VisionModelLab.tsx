@@ -20,6 +20,7 @@ import {
 import { runDownloadPreflight } from '../storage/download-preflight';
 import { installModel } from '../storage/install-model';
 import { validateVisionImageFile, VISION_IMAGE_ACCEPT_ATTRIBUTE } from './input-validation';
+import { preprocessVisionImage, type VisionImagePreprocessResult } from './preprocess-image';
 
 type VisionStatus = 'idle' | 'loading' | 'ready' | 'running' | 'cancelling' | 'error';
 
@@ -60,7 +61,9 @@ export function VisionModelLab() {
   const [caption, setCaption] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [image, setImage] = useState<Blob | null>(null);
+  const [imageMetadata, setImageMetadata] = useState<VisionImagePreprocessResult | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [preprocessing, setPreprocessing] = useState(false);
   const [cachedFilesOnly, setCachedFilesOnly] = useState(false);
   const [cacheStatus, setCacheStatus] = useState<RuntimeCacheStatus>({
     cached: false,
@@ -121,14 +124,28 @@ export function VisionModelLab() {
     return adapterRef.current;
   }
 
-  function setPreview(blob: Blob) {
+  function setPreview(blob: Blob, metadata: VisionImagePreprocessResult) {
     if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
     const nextUrl = URL.createObjectURL(blob);
     previewUrlRef.current = nextUrl;
     setPreviewUrl(nextUrl);
     setImage(blob);
+    setImageMetadata(metadata);
     setCaption('');
     setDurationMs(null);
+  }
+
+  async function prepareSelectedImage(blob: Blob) {
+    setPreprocessing(true);
+    setError(null);
+    try {
+      const processed = await preprocessVisionImage(blob);
+      setPreview(processed.blob, processed);
+    } catch (preprocessError) {
+      setError(errorMessage(preprocessError, 'This image could not be prepared locally.'));
+    } finally {
+      if (mountedRef.current) setPreprocessing(false);
+    }
   }
 
   async function readCacheStatus() {
@@ -284,19 +301,17 @@ export function VisionModelLab() {
       setError('This browser could not encode the sample image.');
       return;
     }
-    setError(null);
-    setPreview(blob);
+    await prepareSelectedImage(blob);
   }
 
-  function selectImage(file: File | undefined) {
+  async function selectImage(file: File | undefined) {
     if (!file) return;
     const validation = validateVisionImageFile(file);
     if (!validation.valid) {
       setError(validation.message);
       return;
     }
-    setError(null);
-    setPreview(file);
+    await prepareSelectedImage(file);
   }
 
   async function runCaption() {
@@ -385,7 +400,8 @@ export function VisionModelLab() {
   }
 
   const ready = status === 'ready' || status === 'running' || status === 'cancelling';
-  const busy = status === 'loading' || status === 'running' || status === 'cancelling';
+  const busy =
+    preprocessing || status === 'loading' || status === 'running' || status === 'cancelling';
 
   return (
     <section className="section vision-lab-section" id="vision-lab">
@@ -419,18 +435,18 @@ export function VisionModelLab() {
           <div className="model-actions">
             <button
               className="button button--quiet"
-              disabled={status === 'running' || status === 'cancelling'}
+              disabled={busy}
               onClick={() => void useSample()}
               type="button"
             >
-              Use sample image
+              {preprocessing ? 'Preparing image…' : 'Use sample image'}
             </button>
             <label className="button button--quiet file-button">
               Choose image
               <input
                 accept={VISION_IMAGE_ACCEPT_ATTRIBUTE}
-                disabled={status === 'running' || status === 'cancelling'}
-                onChange={(event) => selectImage(event.target.files?.[0])}
+                disabled={busy}
+                onChange={(event) => void selectImage(event.target.files?.[0])}
                 type="file"
               />
             </label>
@@ -560,6 +576,16 @@ export function VisionModelLab() {
             <div>
               <dt>Execution</dt>
               <dd>{runtimeDevice === 'webgpu' ? 'WebGPU worker' : 'WebAssembly worker'}</dd>
+            </div>
+            <div>
+              <dt>Prepared input</dt>
+              <dd>
+                {imageMetadata
+                  ? `${imageMetadata.width}×${imageMetadata.height} PNG · ${formatBytes(
+                      imageMetadata.processedBytes,
+                    )}${imageMetadata.resized ? ' · resized locally' : ''}`
+                  : 'No image prepared'}
+              </dd>
             </div>
             <div>
               <dt>Offline cache</dt>
