@@ -389,7 +389,7 @@ export function VisionModelLab() {
     <section className="section vision-lab-section" id="vision-lab">
       <div className="model-lab-heading">
         <div>
-          <p className="kicker">VISION FEASIBILITY SPIKE</p>
+          <p className="kicker">VISION DESK</p>
           <h2>Let the browser look.</h2>
         </div>
         <p>

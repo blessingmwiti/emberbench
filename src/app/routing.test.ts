@@ -8,6 +8,7 @@ describe('application routing', () => {
     expect(parseAppRoute('#downloads')).toBe('downloads');
     expect(parseAppRoute('#/settings?from=downloads')).toBe('settings');
     expect(parseAppRoute('#/code')).toBe('code');
+    expect(parseAppRoute('#/vision')).toBe('vision');
     expect(parseAppRoute('#/unknown')).toBe('home');
     expect(parseAppRoute('')).toBe('home');
   });
@@ -16,5 +17,6 @@ describe('application routing', () => {
     expect(routeHref('home')).toBe('#/');
     expect(routeHref('models')).toBe('#/models');
     expect(routeHref('code')).toBe('#/code');
+    expect(routeHref('vision')).toBe('#/vision');
   });
 });

@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
 
-export const APP_ROUTES = ['home', 'assistant', 'code', 'models', 'downloads', 'settings'] as const;
+export const APP_ROUTES = [
+  'home',
+  'assistant',
+  'code',
+  'vision',
+  'models',
+  'downloads',
+  'settings',
+] as const;
 
 export type AppRoute = (typeof APP_ROUTES)[number];
 

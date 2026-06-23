@@ -491,7 +491,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Code Lab workspace
 
-- [~] Add syntax-aware code input.
+- [x] Add syntax-aware code input.
 - [x] Add language selection and automatic hints.
 - [x] Add Explain, Generate, Refactor, Debug, and Review modes.
 - [x] Define mode-specific prompt recipes.
@@ -503,7 +503,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Third MVP workspace
 
-- [ ] Build the selected Vision Desk or Transcription Studio interface.
+- [x] Build the selected Vision Desk interface.
 - [ ] Validate accepted input formats and size limits.
 - [ ] Perform preprocessing locally.
 - [ ] Display progress during inference.

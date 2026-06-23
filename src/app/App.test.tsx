@@ -19,6 +19,7 @@ describe('App', () => {
     expect(screen.getByText('General Assistant')).toBeInTheDocument();
     expect(screen.getByText('Code Lab')).toBeInTheDocument();
     expect(screen.getByText('Vision Desk')).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Open workspace →' })).toHaveLength(3);
     expect(await screen.findByText('WebGPU is unavailable')).toBeInTheDocument();
   });
 });
