@@ -506,7 +506,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [x] Build the selected Vision Desk interface.
 - [x] Validate accepted input formats and size limits.
 - [x] Perform preprocessing locally.
-- [ ] Display progress during inference.
+- [x] Display progress during inference.
 - [ ] Render structured task output.
 - [ ] Persist session metadata without duplicating large user files unnecessarily.
 - [ ] Provide clear deletion controls.

@@ -21,6 +21,7 @@ import { runDownloadPreflight } from '../storage/download-preflight';
 import { installModel } from '../storage/install-model';
 import { validateVisionImageFile, VISION_IMAGE_ACCEPT_ATTRIBUTE } from './input-validation';
 import { preprocessVisionImage, type VisionImagePreprocessResult } from './preprocess-image';
+import { visionAnalysisProgressLabel } from './progress';
 
 type VisionStatus = 'idle' | 'loading' | 'ready' | 'running' | 'cancelling' | 'error';
 
@@ -402,6 +403,7 @@ export function VisionModelLab() {
   const ready = status === 'ready' || status === 'running' || status === 'cancelling';
   const busy =
     preprocessing || status === 'loading' || status === 'running' || status === 'cancelling';
+  const analysisProgressLabel = visionAnalysisProgressLabel(preprocessing, status);
 
   return (
     <section className="section vision-lab-section" id="vision-lab">
@@ -555,6 +557,15 @@ export function VisionModelLab() {
               role="progressbar"
             >
               <span style={{ width: `${progress ?? 0}%` }} />
+            </div>
+          ) : null}
+          {analysisProgressLabel ? (
+            <div
+              aria-label={analysisProgressLabel}
+              className="model-progress model-progress--indeterminate"
+              role="progressbar"
+            >
+              <span />
             </div>
           ) : null}
 
