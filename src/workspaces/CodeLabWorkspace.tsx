@@ -32,6 +32,7 @@ import {
   type CodeLabLanguage,
   type CodeLabMode,
 } from './code-lab-draft';
+import { highlightCode } from './code-highlighting';
 import { copyText } from './clipboard';
 import {
   codeCursorPosition,
@@ -63,6 +64,7 @@ function sessionDraft(session: WorkspaceSession) {
 export function CodeLabWorkspace() {
   const adapterRef = useRef<TransformersTextWorkerAdapter | null>(null);
   const requestRef = useRef<string | null>(null);
+  const highlightRef = useRef<HTMLPreElement | null>(null);
   const sourceRef = useRef<HTMLTextAreaElement | null>(null);
   const [sessions, setSessions] = useState<WorkspaceSession[]>([]);
   const [session, setSession] = useState<WorkspaceSession | null>(null);
@@ -257,6 +259,7 @@ export function CodeLabWorkspace() {
   }
 
   const sourceLength = draft.code.length;
+  const sourceHighlightTokens = highlightCode(draft.code, draft.language);
   const busy = status === 'loading' || status === 'running';
   const latestResult = [...(session?.messages ?? [])]
     .reverse()
@@ -387,49 +390,73 @@ export function CodeLabWorkspace() {
           <label className="code-editor-label" htmlFor="code-source">
             Source code
           </label>
-          <textarea
-            autoCapitalize="off"
-            autoCorrect="off"
-            data-language={draft.language}
-            id="code-source"
-            onChange={(event) => {
-              setDraft((current) => ({ ...current, code: event.target.value }));
-              setCursorPosition(
-                codeCursorPosition(event.target.value, event.target.selectionStart),
-              );
-            }}
-            onKeyDown={(event) => {
-              if (event.key === 'Tab') {
-                event.preventDefault();
-                applyCodeEdit(
-                  indentCodeSelection(
-                    draft.code,
-                    event.currentTarget.selectionStart,
-                    event.currentTarget.selectionEnd,
-                    event.shiftKey,
-                  ),
+          <div className="code-source-shell">
+            <pre
+              aria-hidden="true"
+              className="code-source-highlight"
+              data-language={draft.language}
+              ref={highlightRef}
+            >
+              {sourceHighlightTokens.map((token, index) => (
+                <span className={`code-token code-token--${token.kind}`} key={index}>
+                  {token.text}
+                </span>
+              ))}
+              {draft.code.endsWith('\n') ? ' ' : null}
+            </pre>
+            <textarea
+              autoCapitalize="off"
+              autoCorrect="off"
+              className="code-source-textarea"
+              data-language={draft.language}
+              id="code-source"
+              onChange={(event) => {
+                setDraft((current) => ({ ...current, code: event.target.value }));
+                setCursorPosition(
+                  codeCursorPosition(event.target.value, event.target.selectionStart),
                 );
-              } else if (event.key === 'Enter') {
-                event.preventDefault();
-                applyCodeEdit(
-                  insertIndentedNewline(
-                    draft.code,
-                    event.currentTarget.selectionStart,
-                    event.currentTarget.selectionEnd,
-                    draft.language,
-                  ),
-                );
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Tab') {
+                  event.preventDefault();
+                  applyCodeEdit(
+                    indentCodeSelection(
+                      draft.code,
+                      event.currentTarget.selectionStart,
+                      event.currentTarget.selectionEnd,
+                      event.shiftKey,
+                    ),
+                  );
+                } else if (event.key === 'Enter') {
+                  event.preventDefault();
+                  applyCodeEdit(
+                    insertIndentedNewline(
+                      draft.code,
+                      event.currentTarget.selectionStart,
+                      event.currentTarget.selectionEnd,
+                      draft.language,
+                    ),
+                  );
+                }
+              }}
+              onScroll={(event) => {
+                if (!highlightRef.current) return;
+                highlightRef.current.scrollLeft = event.currentTarget.scrollLeft;
+                highlightRef.current.scrollTop = event.currentTarget.scrollTop;
+              }}
+              onSelect={(event) =>
+                setCursorPosition(
+                  codeCursorPosition(draft.code, event.currentTarget.selectionStart),
+                )
               }
-            }}
-            onSelect={(event) =>
-              setCursorPosition(codeCursorPosition(draft.code, event.currentTarget.selectionStart))
-            }
-            placeholder="Paste code here, or leave this blank when generating from instructions…"
-            ref={sourceRef}
-            rows={18}
-            spellCheck={false}
-            value={draft.code}
-          />
+              placeholder="Paste code here, or leave this blank when generating from instructions…"
+              ref={sourceRef}
+              rows={18}
+              spellCheck={false}
+              value={draft.code}
+              wrap="off"
+            />
+          </div>
 
           <label className="code-editor-label" htmlFor="code-instruction">
             Task instructions

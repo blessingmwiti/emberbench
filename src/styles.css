@@ -1184,9 +1184,89 @@ h2 {
   white-space: pre;
 }
 
+.code-source-shell {
+  position: relative;
+  min-height: 470px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #110d0b;
+}
+
+.code-source-highlight,
+.code-source-textarea {
+  min-height: 470px;
+  margin: 0;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  tab-size: 2;
+  white-space: pre;
+}
+
+.code-source-highlight {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  padding: 14px;
+  overflow: hidden;
+  color: var(--cream);
+  pointer-events: none;
+}
+
+.code-source-textarea {
+  position: relative;
+  z-index: 1;
+  border: 0 !important;
+  background: transparent !important;
+  caret-color: var(--cream);
+  color: transparent !important;
+  overflow: auto;
+  -webkit-text-fill-color: transparent;
+}
+
+.code-source-textarea::placeholder {
+  color: var(--muted);
+  -webkit-text-fill-color: var(--muted);
+}
+
+.code-source-textarea::selection {
+  background: rgb(255 113 68 / 35%);
+  -webkit-text-fill-color: var(--cream);
+}
+
+.code-source-shell:focus-within {
+  border-color: var(--ember);
+  box-shadow: 0 0 0 3px rgb(255 113 68 / 12%);
+}
+
+.code-token--keyword {
+  color: #ffb28f;
+}
+
+.code-token--string {
+  color: #b7e8c0;
+}
+
+.code-token--comment {
+  color: #8f8178;
+  font-style: italic;
+}
+
+.code-token--number {
+  color: #d9adff;
+}
+
+.code-token--operator {
+  color: #ffd08a;
+}
+
 .code-lab-editor textarea:focus {
   border-color: var(--ember);
   box-shadow: 0 0 0 3px rgb(255 113 68 / 12%);
+}
+
+.code-source-textarea:focus {
+  box-shadow: none;
 }
 
 .code-lab-hint,

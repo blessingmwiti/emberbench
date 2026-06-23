@@ -1133,6 +1133,6 @@ Ideas belong here until they are accepted into a chronological phase.
 - [x] Build the first Code Lab workspace shell on the shared session repository.
 - [x] Select and validate a browser-compatible curated code model for Code Lab.
 - [x] Install and run the pinned Qwen2.5-Coder 0.5B q4 model in a real browser probe.
-- [~] Add syntax highlighting and dedicated diff rendering to Code Lab.
+- [x] Add syntax highlighting and dedicated diff rendering to Code Lab.
 - [x] Complete dependency-free editor indentation support.
-- [ ] Add dependency-free syntax highlighting to the Code Lab source editor.
+- [x] Add dependency-free syntax highlighting to the Code Lab source editor.
