@@ -1,9 +1,11 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { VisionTaskOutput } from './VisionTaskOutput';
 
 const emptyCache = { cached: false, files: [] };
+
+afterEach(() => cleanup());
 
 describe('VisionTaskOutput', () => {
   it('renders the waiting structured output state', () => {
@@ -11,11 +13,15 @@ describe('VisionTaskOutput', () => {
       <VisionTaskOutput
         cacheInspected={false}
         cacheStatus={emptyCache}
+        canClear={false}
+        canDeleteSavedResult={false}
         caption=""
         durationMs={null}
         imageMetadata={null}
         installStatus="Not recorded"
         loadTimeMs={null}
+        onClear={() => {}}
+        onDeleteSavedResult={() => {}}
         runtimeDevice="webgpu"
         storageMessage={null}
       />,
@@ -25,6 +31,8 @@ describe('VisionTaskOutput', () => {
     expect(screen.getByText('Waiting for analysis')).toBeInTheDocument();
     expect(screen.getByText('The generated image caption will appear here.')).toBeInTheDocument();
     expect(screen.getByText('No image prepared')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Clear local image and result' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Delete saved metadata' })).toBeDisabled();
   });
 
   it('renders generated caption details without storing the image', () => {
@@ -38,6 +46,8 @@ describe('VisionTaskOutput', () => {
             { cached: false, file: 'tokenizer.json' },
           ],
         }}
+        canClear
+        canDeleteSavedResult
         caption="a small illustrated house"
         durationMs={1534}
         imageMetadata={{
@@ -49,6 +59,8 @@ describe('VisionTaskOutput', () => {
         }}
         installStatus="installed"
         loadTimeMs={2450}
+        onClear={() => {}}
+        onDeleteSavedResult={() => {}}
         runtimeDevice="wasm"
         storageMessage="Storage is local."
       />,
@@ -61,5 +73,7 @@ describe('VisionTaskOutput', () => {
     expect(screen.getByText('640×420 PNG · 12.3 KB')).toBeInTheDocument();
     expect(screen.getByText('1/2 files')).toBeInTheDocument();
     expect(screen.getByText('Storage is local.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Clear local image and result' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Delete saved metadata' })).toBeEnabled();
   });
 });

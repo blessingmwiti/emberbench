@@ -2313,6 +2313,19 @@ h2 {
   font-size: 11px;
 }
 
+.vision-result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.vision-result-actions .button {
+  min-height: 40px;
+  padding-inline: 14px;
+  font-size: 12px;
+}
+
 .importer-grid {
   display: grid;
   grid-template-columns: 0.8fr 1.2fr;

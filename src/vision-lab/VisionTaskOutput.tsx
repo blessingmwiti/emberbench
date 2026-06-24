@@ -6,11 +6,15 @@ import type { VisionImageMetadata } from './preprocess-image';
 interface VisionTaskOutputProps {
   cacheInspected: boolean;
   cacheStatus: RuntimeCacheStatus;
+  canClear: boolean;
+  canDeleteSavedResult: boolean;
   caption: string;
   durationMs: number | null;
   imageMetadata: VisionImageMetadata | null;
   installStatus: string;
   loadTimeMs: number | null;
+  onClear: () => void;
+  onDeleteSavedResult: () => void;
   runtimeDevice: TransformersRuntimeDevice;
   storageMessage: string | null;
 }
@@ -32,11 +36,15 @@ function preparedInputLabel(imageMetadata: VisionImageMetadata | null) {
 export function VisionTaskOutput({
   cacheInspected,
   cacheStatus,
+  canClear,
+  canDeleteSavedResult,
   caption,
   durationMs,
   imageMetadata,
   installStatus,
   loadTimeMs,
+  onClear,
+  onDeleteSavedResult,
   runtimeDevice,
   storageMessage,
 }: VisionTaskOutputProps) {
@@ -81,6 +89,24 @@ export function VisionTaskOutput({
           <dd>{installStatus}</dd>
         </div>
       </dl>
+      <div className="vision-result-actions">
+        <button
+          className="button button--quiet"
+          disabled={!canClear}
+          onClick={onClear}
+          type="button"
+        >
+          Clear local image and result
+        </button>
+        <button
+          className="button button--danger"
+          disabled={!canDeleteSavedResult}
+          onClick={onDeleteSavedResult}
+          type="button"
+        >
+          Delete saved metadata
+        </button>
+      </div>
       {storageMessage ? <p className="storage-message">{storageMessage}</p> : null}
     </aside>
   );

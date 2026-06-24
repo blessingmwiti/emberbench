@@ -71,6 +71,7 @@ export function VisionModelLab() {
   const [imageMetadata, setImageMetadata] = useState<VisionImageMetadata | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [preprocessing, setPreprocessing] = useState(false);
+  const [savedVisionSessionId, setSavedVisionSessionId] = useState<string | null>(null);
   const [cachedFilesOnly, setCachedFilesOnly] = useState(false);
   const [cacheStatus, setCacheStatus] = useState<RuntimeCacheStatus>({
     cached: false,
@@ -139,6 +140,7 @@ export function VisionModelLab() {
         setDurationMs(restored.snapshot.durationMs);
         setImageMetadata(restored.snapshot.imageMetadata);
         setLoadTimeMs(restored.snapshot.loadTimeMs);
+        setSavedVisionSessionId(restored.session.id);
         setStorageMessage(
           'Restored the latest Vision result metadata. Image files are not stored.',
         );
@@ -166,6 +168,7 @@ export function VisionModelLab() {
     captionRef.current = '';
     setCaption('');
     setDurationMs(null);
+    setSavedVisionSessionId(null);
   }
 
   async function prepareSelectedImage(blob: Blob) {
@@ -431,8 +434,32 @@ export function VisionModelLab() {
     session = appendWorkspaceMessage(session, 'assistant', snapshot);
     await workspaceSessions.put(session);
     if (mountedRef.current) {
+      setSavedVisionSessionId(session.id);
       setStorageMessage('Vision result metadata saved locally. Image files were not stored.');
     }
+  }
+
+  function clearVisionState() {
+    requestRef.current = null;
+    captionRef.current = '';
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
+    setCaption('');
+    setDurationMs(null);
+    setImage(null);
+    setImageMetadata(null);
+    setPreviewUrl(null);
+    setError(null);
+    setStorageMessage('Cleared the current Vision image and result from this browser session.');
+  }
+
+  async function deleteSavedVisionResult() {
+    if (!savedVisionSessionId) return;
+    await workspaceSessions.delete(savedVisionSessionId);
+    setSavedVisionSessionId(null);
+    setStorageMessage('Deleted saved Vision result metadata.');
   }
 
   async function cancel() {
@@ -639,6 +666,10 @@ export function VisionModelLab() {
           imageMetadata={imageMetadata}
           installStatus={installRecord?.status ?? 'Not recorded'}
           loadTimeMs={loadTimeMs}
+          canClear={Boolean(image || imageMetadata || caption)}
+          canDeleteSavedResult={savedVisionSessionId !== null}
+          onClear={clearVisionState}
+          onDeleteSavedResult={() => void deleteSavedVisionResult()}
           runtimeDevice={runtimeDevice}
           storageMessage={storageMessage}
         />

@@ -509,7 +509,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [x] Display progress during inference.
 - [x] Render structured task output.
 - [x] Persist session metadata without duplicating large user files unnecessarily.
-- [ ] Provide clear deletion controls.
+- [x] Provide clear deletion controls.
 
 ### Exit criteria
 
