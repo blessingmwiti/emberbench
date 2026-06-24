@@ -22,6 +22,7 @@ import { installModel } from '../storage/install-model';
 import { validateVisionImageFile, VISION_IMAGE_ACCEPT_ATTRIBUTE } from './input-validation';
 import { preprocessVisionImage, type VisionImagePreprocessResult } from './preprocess-image';
 import { visionAnalysisProgressLabel } from './progress';
+import { VisionTaskOutput } from './VisionTaskOutput';
 
 type VisionStatus = 'idle' | 'loading' | 'ready' | 'running' | 'cancelling' | 'error';
 
@@ -30,13 +31,6 @@ if (!curatedVisionModel) {
   throw new Error('The curated Vision Model Lab model is missing.');
 }
 const visionModel = curatedVisionModel;
-
-function formatDuration(milliseconds: number | null) {
-  if (milliseconds === null) return '—';
-  return milliseconds >= 1000
-    ? `${(milliseconds / 1000).toFixed(2)} s`
-    : `${milliseconds.toFixed(0)} ms`;
-}
 
 function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
@@ -572,47 +566,17 @@ export function VisionModelLab() {
           {error ? <p className="model-error">{error}</p> : null}
         </div>
 
-        <aside className="vision-result" aria-live="polite">
-          <p className="panel-label">LOCAL VISION RESULT</p>
-          <blockquote>{caption || 'The generated image caption will appear here.'}</blockquote>
-          <dl>
-            <div>
-              <dt>Model load</dt>
-              <dd>{formatDuration(loadTimeMs)}</dd>
-            </div>
-            <div>
-              <dt>Caption latency</dt>
-              <dd>{formatDuration(durationMs)}</dd>
-            </div>
-            <div>
-              <dt>Execution</dt>
-              <dd>{runtimeDevice === 'webgpu' ? 'WebGPU worker' : 'WebAssembly worker'}</dd>
-            </div>
-            <div>
-              <dt>Prepared input</dt>
-              <dd>
-                {imageMetadata
-                  ? `${imageMetadata.width}×${imageMetadata.height} PNG · ${formatBytes(
-                      imageMetadata.processedBytes,
-                    )}${imageMetadata.resized ? ' · resized locally' : ''}`
-                  : 'No image prepared'}
-              </dd>
-            </div>
-            <div>
-              <dt>Offline cache</dt>
-              <dd>
-                {!cacheInspected
-                  ? 'Not inspected'
-                  : `${cacheStatus.files.filter((file) => file.cached).length}/${cacheStatus.files.length} files`}
-              </dd>
-            </div>
-            <div>
-              <dt>Install record</dt>
-              <dd>{installRecord?.status ?? 'Not recorded'}</dd>
-            </div>
-          </dl>
-          {storageMessage ? <p className="storage-message">{storageMessage}</p> : null}
-        </aside>
+        <VisionTaskOutput
+          cacheInspected={cacheInspected}
+          cacheStatus={cacheStatus}
+          caption={caption}
+          durationMs={durationMs}
+          imageMetadata={imageMetadata}
+          installStatus={installRecord?.status ?? 'Not recorded'}
+          loadTimeMs={loadTimeMs}
+          runtimeDevice={runtimeDevice}
+          storageMessage={storageMessage}
+        />
       </div>
     </section>
   );

@@ -507,7 +507,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [x] Validate accepted input formats and size limits.
 - [x] Perform preprocessing locally.
 - [x] Display progress during inference.
-- [ ] Render structured task output.
+- [x] Render structured task output.
 - [ ] Persist session metadata without duplicating large user files unnecessarily.
 - [ ] Provide clear deletion controls.
 
