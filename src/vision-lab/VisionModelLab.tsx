@@ -16,12 +16,24 @@ import {
   INSTALLED_MODELS_CHANGED_EVENT,
   installedModels,
   SETTINGS_CHANGED_EVENT,
+  workspaceSessions,
 } from '../storage/database';
 import { runDownloadPreflight } from '../storage/download-preflight';
 import { installModel } from '../storage/install-model';
+import { appendWorkspaceMessage, createWorkspaceSession } from '../workspaces/session';
 import { validateVisionImageFile, VISION_IMAGE_ACCEPT_ATTRIBUTE } from './input-validation';
-import { preprocessVisionImage, type VisionImagePreprocessResult } from './preprocess-image';
+import {
+  preprocessVisionImage,
+  type VisionImageMetadata,
+  type VisionImagePreprocessResult,
+} from './preprocess-image';
 import { visionAnalysisProgressLabel } from './progress';
+import {
+  latestVisionSnapshot,
+  serializeVisionSessionSnapshot,
+  visionSessionTitle,
+} from './vision-session';
+import { VisionTaskOutput } from './VisionTaskOutput';
 
 type VisionStatus = 'idle' | 'loading' | 'ready' | 'running' | 'cancelling' | 'error';
 
@@ -30,13 +42,6 @@ if (!curatedVisionModel) {
   throw new Error('The curated Vision Model Lab model is missing.');
 }
 const visionModel = curatedVisionModel;
-
-function formatDuration(milliseconds: number | null) {
-  if (milliseconds === null) return '—';
-  return milliseconds >= 1000
-    ? `${(milliseconds / 1000).toFixed(2)} s`
-    : `${milliseconds.toFixed(0)} ms`;
-}
 
 function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
@@ -51,6 +56,7 @@ function isAbortError(error: unknown) {
 
 export function VisionModelLab() {
   const adapterRef = useRef<TransformersVisionWorkerAdapter | null>(null);
+  const captionRef = useRef('');
   const requestRef = useRef<string | null>(null);
   const previewUrlRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
@@ -62,9 +68,10 @@ export function VisionModelLab() {
   const [caption, setCaption] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [image, setImage] = useState<Blob | null>(null);
-  const [imageMetadata, setImageMetadata] = useState<VisionImagePreprocessResult | null>(null);
+  const [imageMetadata, setImageMetadata] = useState<VisionImageMetadata | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [preprocessing, setPreprocessing] = useState(false);
+  const [savedVisionSessionId, setSavedVisionSessionId] = useState<string | null>(null);
   const [cachedFilesOnly, setCachedFilesOnly] = useState(false);
   const [cacheStatus, setCacheStatus] = useState<RuntimeCacheStatus>({
     cached: false,
@@ -120,6 +127,32 @@ export function VisionModelLab() {
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    void workspaceSessions
+      .list()
+      .then((sessions) => {
+        if (!active) return;
+        const restored = latestVisionSnapshot(sessions);
+        if (!restored) return;
+        captionRef.current = restored.snapshot.caption;
+        setCaption(restored.snapshot.caption);
+        setDurationMs(restored.snapshot.durationMs);
+        setImageMetadata(restored.snapshot.imageMetadata);
+        setLoadTimeMs(restored.snapshot.loadTimeMs);
+        setSavedVisionSessionId(restored.session.id);
+        setStorageMessage(
+          'Restored the latest Vision result metadata. Image files are not stored.',
+        );
+      })
+      .catch(() => {
+        if (active) setStorageMessage('Vision result metadata could not be restored.');
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   function ensureAdapter() {
     adapterRef.current ??= new TransformersVisionWorkerAdapter(undefined, runtimeDevice);
     return adapterRef.current;
@@ -132,8 +165,10 @@ export function VisionModelLab() {
     setPreviewUrl(nextUrl);
     setImage(blob);
     setImageMetadata(metadata);
+    captionRef.current = '';
     setCaption('');
     setDurationMs(null);
+    setSavedVisionSessionId(null);
   }
 
   async function prepareSelectedImage(blob: Blob) {
@@ -355,10 +390,13 @@ export function VisionModelLab() {
 
   function handleRunEvent(event: RuntimeEvent) {
     if (event.type === 'result' && typeof event.data.caption === 'string') {
-      setCaption(event.data.caption);
+      const nextCaption = event.data.caption;
+      captionRef.current = nextCaption;
+      setCaption(nextCaption);
     }
     if (event.type === 'complete') {
       setDurationMs(event.durationMs);
+      void persistVisionResult(event.durationMs);
       void benchmarks
         .put({
           createdAt: new Date().toISOString(),
@@ -374,6 +412,54 @@ export function VisionModelLab() {
         })
         .catch(() => {});
     }
+  }
+
+  async function persistVisionResult(nextDurationMs: number) {
+    const currentCaption = captionRef.current.trim();
+    if (!currentCaption) return;
+    const snapshot = serializeVisionSessionSnapshot({
+      caption: currentCaption,
+      durationMs: nextDurationMs,
+      imageMetadata,
+      loadTimeMs,
+      modelId: visionModel.id,
+      runtimeDevice,
+      schemaVersion: 1,
+    });
+    let session = createWorkspaceSession(
+      'vision',
+      visionSessionTitle(currentCaption),
+      visionModel.id,
+    );
+    session = appendWorkspaceMessage(session, 'assistant', snapshot);
+    await workspaceSessions.put(session);
+    if (mountedRef.current) {
+      setSavedVisionSessionId(session.id);
+      setStorageMessage('Vision result metadata saved locally. Image files were not stored.');
+    }
+  }
+
+  function clearVisionState() {
+    requestRef.current = null;
+    captionRef.current = '';
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
+    setCaption('');
+    setDurationMs(null);
+    setImage(null);
+    setImageMetadata(null);
+    setPreviewUrl(null);
+    setError(null);
+    setStorageMessage('Cleared the current Vision image and result from this browser session.');
+  }
+
+  async function deleteSavedVisionResult() {
+    if (!savedVisionSessionId) return;
+    await workspaceSessions.delete(savedVisionSessionId);
+    setSavedVisionSessionId(null);
+    setStorageMessage('Deleted saved Vision result metadata.');
   }
 
   async function cancel() {
@@ -417,6 +503,25 @@ export function VisionModelLab() {
           image and generates a caption locally. The built-in sample is synthetic, so testing it
           sends no personal file anywhere.
         </p>
+      </div>
+
+      <div className="assistant-runtime-status vision-runtime-status" role="status">
+        <div>
+          <span>Active model</span>
+          <strong>{visionModel.name}</strong>
+        </div>
+        <div>
+          <span>Runtime</span>
+          <strong>{runtimeDevice === 'webgpu' ? 'WebGPU' : 'WebAssembly'}</strong>
+        </div>
+        <div>
+          <span>Privacy</span>
+          <strong>Images stay in this browser</strong>
+        </div>
+        <div>
+          <span>Saved data</span>
+          <strong>Metadata only</strong>
+        </div>
       </div>
 
       <div className="vision-lab-grid">
@@ -572,47 +677,21 @@ export function VisionModelLab() {
           {error ? <p className="model-error">{error}</p> : null}
         </div>
 
-        <aside className="vision-result" aria-live="polite">
-          <p className="panel-label">LOCAL VISION RESULT</p>
-          <blockquote>{caption || 'The generated image caption will appear here.'}</blockquote>
-          <dl>
-            <div>
-              <dt>Model load</dt>
-              <dd>{formatDuration(loadTimeMs)}</dd>
-            </div>
-            <div>
-              <dt>Caption latency</dt>
-              <dd>{formatDuration(durationMs)}</dd>
-            </div>
-            <div>
-              <dt>Execution</dt>
-              <dd>{runtimeDevice === 'webgpu' ? 'WebGPU worker' : 'WebAssembly worker'}</dd>
-            </div>
-            <div>
-              <dt>Prepared input</dt>
-              <dd>
-                {imageMetadata
-                  ? `${imageMetadata.width}×${imageMetadata.height} PNG · ${formatBytes(
-                      imageMetadata.processedBytes,
-                    )}${imageMetadata.resized ? ' · resized locally' : ''}`
-                  : 'No image prepared'}
-              </dd>
-            </div>
-            <div>
-              <dt>Offline cache</dt>
-              <dd>
-                {!cacheInspected
-                  ? 'Not inspected'
-                  : `${cacheStatus.files.filter((file) => file.cached).length}/${cacheStatus.files.length} files`}
-              </dd>
-            </div>
-            <div>
-              <dt>Install record</dt>
-              <dd>{installRecord?.status ?? 'Not recorded'}</dd>
-            </div>
-          </dl>
-          {storageMessage ? <p className="storage-message">{storageMessage}</p> : null}
-        </aside>
+        <VisionTaskOutput
+          cacheInspected={cacheInspected}
+          cacheStatus={cacheStatus}
+          caption={caption}
+          durationMs={durationMs}
+          imageMetadata={imageMetadata}
+          installStatus={installRecord?.status ?? 'Not recorded'}
+          loadTimeMs={loadTimeMs}
+          canClear={Boolean(image || imageMetadata || caption)}
+          canDeleteSavedResult={savedVisionSessionId !== null}
+          onClear={clearVisionState}
+          onDeleteSavedResult={() => void deleteSavedVisionResult()}
+          runtimeDevice={runtimeDevice}
+          storageMessage={storageMessage}
+        />
       </div>
     </section>
   );

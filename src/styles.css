@@ -2199,6 +2199,10 @@ h2 {
   gap: 12px;
 }
 
+.vision-runtime-status {
+  margin-bottom: 18px;
+}
+
 .vision-input,
 .vision-result {
   padding: 24px;
@@ -2267,6 +2271,28 @@ h2 {
   line-height: 1.6;
 }
 
+.vision-output-card {
+  margin-top: 18px;
+}
+
+.vision-output-card > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.vision-output-card h3 {
+  margin: 0;
+  color: var(--cream);
+  font-size: 14px;
+}
+
+.vision-output-card span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .vision-result dl {
   margin: 0;
 }
@@ -2289,6 +2315,19 @@ h2 {
   text-align: right;
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
   font-size: 11px;
+}
+
+.vision-result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.vision-result-actions .button {
+  min-height: 40px;
+  padding-inline: 14px;
+  font-size: 12px;
 }
 
 .importer-grid {

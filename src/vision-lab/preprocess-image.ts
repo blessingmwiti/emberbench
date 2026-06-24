@@ -5,11 +5,14 @@ export interface VisionImageDimensions {
   width: number;
 }
 
-export interface VisionImagePreprocessResult extends VisionImageDimensions {
-  blob: Blob;
+export interface VisionImageMetadata extends VisionImageDimensions {
   originalBytes: number;
   processedBytes: number;
   resized: boolean;
+}
+
+export interface VisionImagePreprocessResult extends VisionImageMetadata {
+  blob: Blob;
 }
 
 interface LoadedImage extends VisionImageDimensions {

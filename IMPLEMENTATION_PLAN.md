@@ -507,17 +507,17 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [x] Validate accepted input formats and size limits.
 - [x] Perform preprocessing locally.
 - [x] Display progress during inference.
-- [ ] Render structured task output.
-- [ ] Persist session metadata without duplicating large user files unnecessarily.
-- [ ] Provide clear deletion controls.
+- [x] Render structured task output.
+- [x] Persist session metadata without duplicating large user files unnecessarily.
+- [x] Provide clear deletion controls.
 
 ### Exit criteria
 
 - [ ] A new user can reach useful output without reading setup documentation.
 - [ ] General Assistant and Code Lab work end to end.
 - [ ] The third workspace completes its primary task.
-- [ ] Sessions survive a page reload.
-- [ ] All model processing is visibly identified as local.
+- [x] Sessions survive a page reload.
+- [x] All model processing is visibly identified as local.
 
 ---
 
