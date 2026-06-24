@@ -2199,6 +2199,10 @@ h2 {
   gap: 12px;
 }
 
+.vision-runtime-status {
+  margin-bottom: 18px;
+}
+
 .vision-input,
 .vision-result {
   padding: 24px;

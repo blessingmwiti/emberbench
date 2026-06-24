@@ -505,6 +505,25 @@ export function VisionModelLab() {
         </p>
       </div>
 
+      <div className="assistant-runtime-status vision-runtime-status" role="status">
+        <div>
+          <span>Active model</span>
+          <strong>{visionModel.name}</strong>
+        </div>
+        <div>
+          <span>Runtime</span>
+          <strong>{runtimeDevice === 'webgpu' ? 'WebGPU' : 'WebAssembly'}</strong>
+        </div>
+        <div>
+          <span>Privacy</span>
+          <strong>Images stay in this browser</strong>
+        </div>
+        <div>
+          <span>Saved data</span>
+          <strong>Metadata only</strong>
+        </div>
+      </div>
+
       <div className="vision-lab-grid">
         <div className="vision-input">
           <div className="model-console__bar">
