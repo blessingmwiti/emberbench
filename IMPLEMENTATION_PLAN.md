@@ -516,7 +516,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [ ] A new user can reach useful output without reading setup documentation.
 - [ ] General Assistant and Code Lab work end to end.
 - [ ] The third workspace completes its primary task.
-- [ ] Sessions survive a page reload.
+- [x] Sessions survive a page reload.
 - [x] All model processing is visibly identified as local.
 
 ---
