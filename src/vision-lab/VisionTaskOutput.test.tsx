@@ -41,7 +41,6 @@ describe('VisionTaskOutput', () => {
         caption="a small illustrated house"
         durationMs={1534}
         imageMetadata={{
-          blob: new Blob(['prepared']),
           height: 420,
           originalBytes: 500_000,
           processedBytes: 12_600,

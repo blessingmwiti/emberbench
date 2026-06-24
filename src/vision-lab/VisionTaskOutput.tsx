@@ -1,14 +1,14 @@
 import { formatBytes } from '../diagnostics/format';
 import type { RuntimeCacheStatus } from '../runtimes/core/types';
 import type { TransformersRuntimeDevice } from '../runtimes/transformers/runtime-device';
-import type { VisionImagePreprocessResult } from './preprocess-image';
+import type { VisionImageMetadata } from './preprocess-image';
 
 interface VisionTaskOutputProps {
   cacheInspected: boolean;
   cacheStatus: RuntimeCacheStatus;
   caption: string;
   durationMs: number | null;
-  imageMetadata: VisionImagePreprocessResult | null;
+  imageMetadata: VisionImageMetadata | null;
   installStatus: string;
   loadTimeMs: number | null;
   runtimeDevice: TransformersRuntimeDevice;
@@ -22,7 +22,7 @@ function formatDuration(milliseconds: number | null) {
     : `${milliseconds.toFixed(0)} ms`;
 }
 
-function preparedInputLabel(imageMetadata: VisionImagePreprocessResult | null) {
+function preparedInputLabel(imageMetadata: VisionImageMetadata | null) {
   if (!imageMetadata) return 'No image prepared';
   return `${imageMetadata.width}×${imageMetadata.height} PNG · ${formatBytes(
     imageMetadata.processedBytes,
