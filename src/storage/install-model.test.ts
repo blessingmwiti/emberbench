@@ -32,12 +32,18 @@ function manifest() {
   return model;
 }
 
-function adapter(events: RuntimeEvent[], cached = true) {
+type TestRuntimeAdapter = ModelRuntimeAdapter & {
+  downloadMock: ReturnType<typeof vi.fn>;
+};
+
+function adapter(events: RuntimeEvent[], cached = true): TestRuntimeAdapter {
+  const downloadMock = vi.fn(async function* () {
+    await Promise.resolve();
+    yield* events;
+  });
   return {
-    async *download() {
-      await Promise.resolve();
-      yield* events;
-    },
+    download: downloadMock,
+    downloadMock,
     inspectCache: vi.fn().mockResolvedValue({
       cached,
       files: [
@@ -46,7 +52,7 @@ function adapter(events: RuntimeEvent[], cached = true) {
       ],
     }),
     load: vi.fn().mockResolvedValue({ modelId: manifest().id, state: 'ready' }),
-  } as unknown as ModelRuntimeAdapter;
+  } as unknown as TestRuntimeAdapter;
 }
 
 describe('installModel', () => {
@@ -165,4 +171,49 @@ describe('installModel', () => {
 
     expect(mocks.acquire).not.toHaveBeenCalled();
   });
+
+  it('fails an incomplete cached-only installation offline without starting a remote download', async () => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+    const partialRecord: InstalledModel = {
+      ...createPartialRecord(),
+      cachedFiles: 1,
+      downloadProgress: 0.5,
+      totalFiles: 2,
+    };
+    const runtime = adapter([], false);
+    mocks.get.mockResolvedValue(partialRecord);
+
+    await expect(
+      installModel({
+        adapter: runtime,
+        cachedFilesOnly: true,
+        manifest: manifest(),
+      }),
+    ).rejects.toThrow('Cache verification found missing model files');
+
+    expect(runtime.downloadMock.mock.calls).toHaveLength(0);
+    expect(mocks.acquire).not.toHaveBeenCalled();
+    expect(mocks.put).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        lastError: 'Cache verification found missing model files.',
+        status: 'failed',
+      }),
+    );
+  });
 });
+
+function createPartialRecord(): InstalledModel {
+  return {
+    cachedFiles: 0,
+    createdAt: '2026-06-29T00:00:00.000Z',
+    downloadAttempt: 1,
+    expectedBytes: manifest().artifacts.reduce((total, artifact) => total + artifact.sizeBytes, 0),
+    modelId: manifest().id,
+    schemaVersion: 1,
+    sourceModelId: manifest().source.modelId,
+    sourceRevision: manifest().source.revision,
+    status: 'failed',
+    totalFiles: 0,
+    updatedAt: '2026-06-29T00:01:00.000Z',
+  };
+}

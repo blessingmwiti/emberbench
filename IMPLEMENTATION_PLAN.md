@@ -552,7 +552,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [ ] Add an end-to-end test for offline reload.
 - [ ] Add an end-to-end test for offline inference.
 - [ ] Test application update behavior offline and after reconnect.
-- [ ] Test incomplete model installation offline.
+- [x] Test incomplete model installation offline.
 - [ ] Test storage eviction or missing-file recovery where reproducible.
 
 ### Exit criteria
