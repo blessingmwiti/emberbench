@@ -543,7 +543,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [x] Load an installed model while its origin and Hugging Face are unavailable.
 - [ ] Run each MVP workspace while offline.
 - [ ] Load persisted conversations while offline.
-- [ ] Verify that model deletion updates offline status.
+- [x] Verify that model deletion updates offline status.
 
 ### Offline tests
 
