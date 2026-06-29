@@ -537,7 +537,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 ### Offline model behavior
 
 - [x] Detect whether every required model asset is stored for the text feasibility model.
-- [ ] Add `available offline`, `partial`, and `online only` states.
+- [x] Add `available offline`, `partial`, and `online only` states.
 - [x] Prevent silent network fallback during declared offline inference.
 - [x] Launch the application after its origin server becomes unavailable.
 - [x] Load an installed model while its origin and Hugging Face are unavailable.
