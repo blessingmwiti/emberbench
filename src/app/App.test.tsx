@@ -20,6 +20,11 @@ describe('App', () => {
     expect(screen.getByText('Code Lab')).toBeInTheDocument();
     expect(screen.getByText('Vision Desk')).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: 'Open workspace →' })).toHaveLength(3);
+    expect(screen.getByRole('heading', { name: /reach a local result/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open model library →' })).toHaveAttribute(
+      'href',
+      '#/models',
+    );
     expect(await screen.findByText('WebGPU is unavailable')).toBeInTheDocument();
   });
 });

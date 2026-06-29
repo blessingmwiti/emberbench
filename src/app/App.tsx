@@ -216,6 +216,39 @@ export function App() {
                 ))}
               </div>
             </section>
+
+            <section className="section quickstart-section" id="start-here">
+              <div className="section-heading">
+                <div>
+                  <p className="kicker">START HERE</p>
+                  <h2>Reach a local result without reading setup docs.</h2>
+                </div>
+                <p>
+                  Emberbench keeps the first run inside the app: check the device, install or verify
+                  a model, then open a focused workspace and run the task locally.
+                </p>
+              </div>
+              <div className="quickstart-grid">
+                <article>
+                  <span>01</span>
+                  <h3>Check this browser</h3>
+                  <p>Confirm WebGPU, storage, runtime fallback, and local cache status.</p>
+                  <a href="#diagnostics">Run diagnostics →</a>
+                </article>
+                <article>
+                  <span>02</span>
+                  <h3>Prepare models</h3>
+                  <p>Use the model library and downloads view to make a model offline-ready.</p>
+                  <a href={routeHref('models')}>Open model library →</a>
+                </article>
+                <article>
+                  <span>03</span>
+                  <h3>Run useful work</h3>
+                  <p>Start with chat, code debugging, or the built-in Vision sample image.</p>
+                  <a href={routeHref('assistant')}>Open General Assistant →</a>
+                </article>
+              </div>
+            </section>
           </>
         ) : null}
 
