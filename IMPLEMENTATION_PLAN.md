@@ -513,9 +513,9 @@ The goal of this phase is to eliminate the largest technical risks before invest
 
 ### Exit criteria
 
-- [ ] A new user can reach useful output without reading setup documentation.
-- [ ] General Assistant and Code Lab work end to end.
-- [ ] The third workspace completes its primary task.
+- [x] A new user can reach useful output without reading setup documentation.
+- [x] General Assistant and Code Lab work end to end.
+- [x] The third workspace completes its primary task.
 - [x] Sessions survive a page reload.
 - [x] All model processing is visibly identified as local.
 

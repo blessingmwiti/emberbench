@@ -186,6 +186,8 @@ Workspace sessions now have a versioned local schema and IndexedDB repository wi
 
 General Assistant now runs end to end from the Home workspace launcher. It loads only verified cached model files, streams local replies, supports stopping generation, creates first-message titles, lists/selects/deletes sessions, and restores conversation history after a direct `#/assistant` reload. A live SmolLM2 conversation verified the full path; response quality remains constrained by the intentionally tiny development model.
 
+On June 29, 2026, the MVP workspace proof pass verified all three primary workspace paths in the in-app Chromium browser. SmolLM2 135M was already offline-ready and completed a General Assistant generation from cached files. Qwen2.5-Coder 0.5B was already offline-ready and completed a Code Lab debugging run that identified division by zero and produced a guarded Python fix. The ViT-GPT2 captioner was downloaded through the Vision Desk, reached `ready`, prepared the built-in 640×420 PNG sample locally, and generated the caption `a small toy house with a red and blue house` in 147.61 seconds. Vision saved only task metadata after the run; the image blob was not persisted.
+
 ## Open feasibility risks
 
 - Real browser propagation of WebGPU device loss during active inference
