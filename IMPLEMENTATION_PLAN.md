@@ -537,13 +537,13 @@ The goal of this phase is to eliminate the largest technical risks before invest
 ### Offline model behavior
 
 - [x] Detect whether every required model asset is stored for the text feasibility model.
-- [ ] Add `available offline`, `partial`, and `online only` states.
+- [x] Add `available offline`, `partial`, and `online only` states.
 - [x] Prevent silent network fallback during declared offline inference.
 - [x] Launch the application after its origin server becomes unavailable.
 - [x] Load an installed model while its origin and Hugging Face are unavailable.
 - [ ] Run each MVP workspace while offline.
-- [ ] Load persisted conversations while offline.
-- [ ] Verify that model deletion updates offline status.
+- [x] Load persisted conversations while offline.
+- [x] Verify that model deletion updates offline status.
 
 ### Offline tests
 
@@ -552,7 +552,7 @@ The goal of this phase is to eliminate the largest technical risks before invest
 - [ ] Add an end-to-end test for offline reload.
 - [ ] Add an end-to-end test for offline inference.
 - [ ] Test application update behavior offline and after reconnect.
-- [ ] Test incomplete model installation offline.
+- [x] Test incomplete model installation offline.
 - [ ] Test storage eviction or missing-file recovery where reproducible.
 
 ### Exit criteria

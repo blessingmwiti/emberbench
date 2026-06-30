@@ -19,7 +19,11 @@ import { resolveTransformersRuntimeDevice } from '../../runtimes/transformers/ru
 import type { InstalledModel, ModelManifest } from './types';
 import { removeInstalledModel } from '../../storage/remove-installed-model';
 import { getCuratedModels, getModelDownloadSize } from './registry';
-import { matchesModelLibraryFilter, type ModelLibraryFilter } from './library-filter';
+import {
+  getModelOfflineAvailability,
+  matchesModelLibraryFilter,
+  type ModelLibraryFilter,
+} from './library-filter';
 
 function readInstallLabel(model: ModelManifest, installed: InstalledModel | undefined) {
   if (!installed) {
@@ -207,6 +211,7 @@ export function ModelLibrary({ diagnostic }: { diagnostic: DeviceDiagnostic | nu
           const installation = installations.get(model.id);
           const installationStatus =
             installation?.sourceRevision === model.source.revision ? installation.status : 'none';
+          const offlineAvailability = getModelOfflineAvailability(model, installation);
           const deviceFit = compareModelWithDevice(model, diagnostic, deviceTier);
 
           return (
@@ -221,6 +226,13 @@ export function ModelLibrary({ diagnostic }: { diagnostic: DeviceDiagnostic | nu
               >
                 <span aria-hidden="true">●</span>
                 {readInstallLabel(model, installation)}
+              </div>
+              <div
+                aria-label={offlineAvailability.description}
+                className={`offline-availability offline-availability--${offlineAvailability.state}`}
+                title={offlineAvailability.description}
+              >
+                {offlineAvailability.label}
               </div>
               <div className={`model-device-fit model-device-fit--${deviceFit ?? 'checking'}`}>
                 {deviceFit ? DEVICE_FIT_LABELS[deviceFit] : 'Checking device fit'}

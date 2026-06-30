@@ -1528,6 +1528,34 @@ h2 {
   color: var(--ember);
 }
 
+.offline-availability {
+  display: inline-flex;
+  margin-top: 8px;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.offline-availability--available-offline {
+  border-color: rgba(119, 188, 105, 0.36);
+  color: var(--green);
+}
+
+.offline-availability--partial {
+  border-color: rgba(219, 160, 84, 0.36);
+  color: var(--gold);
+}
+
+.offline-availability--online-only {
+  border-color: rgba(129, 123, 112, 0.36);
+  color: var(--muted);
+}
+
 .model-device-fit {
   margin-top: 7px;
   color: var(--muted);
