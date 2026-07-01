@@ -14,6 +14,35 @@ The project is intended for much more than chat. Emberbench provides reusable wo
 > rendering. Model coverage, browser support, and memory estimates remain subject to device
 > testing.
 
+## Production deployment with PM2
+
+Emberbench builds to static files in `dist/`. In production, PM2 runs the bundled Node static
+server; no extra npm server package is required.
+
+```bash
+pnpm install --frozen-lockfile
+pnpm run build
+pm2 start ecosystem.config.cjs
+pm2 save
+```
+
+By default, the PM2 app binds to `127.0.0.1:4173`, which is intended to sit behind Nginx, Caddy,
+Apache, or another reverse proxy. To expose it directly from the Node process, override the host
+and port before starting or restarting:
+
+```bash
+HOST=0.0.0.0 PORT=4173 pm2 start ecosystem.config.cjs --update-env
+```
+
+For later deploys:
+
+```bash
+git pull origin dev
+pnpm install --frozen-lockfile
+pnpm run build
+pm2 reload emberbench --update-env
+```
+
 ## Why Emberbench?
 
 Local AI is powerful, but getting from “I found a model” to “I am using it” still commonly involves installing runtimes, choosing model formats, understanding quantization, configuring GPU backends, starting servers, and connecting a user interface.

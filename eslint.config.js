@@ -3,18 +3,25 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'coverage/**', 'node_modules/**', 'eslint.config.js'],
+    ignores: [
+      'dist/**',
+      'coverage/**',
+      'node_modules/**',
+      'eslint.config.js',
+      'ecosystem.config.cjs',
+    ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
   {
-    files: ['scripts/generate-service-worker.mjs'],
+    files: ['scripts/generate-service-worker.mjs', 'scripts/serve-dist.mjs'],
     ...tseslint.configs.disableTypeChecked,
     languageOptions: {
       ...tseslint.configs.disableTypeChecked.languageOptions,
       globals: {
         Buffer: 'readonly',
         console: 'readonly',
+        process: 'readonly',
         URL: 'readonly',
       },
     },
