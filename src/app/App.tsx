@@ -417,31 +417,6 @@ export function App() {
         {route === 'code' ? <CodeLabWorkspace /> : null}
 
         {route === 'vision' ? <VisionModelLab /> : null}
-
-        {route === 'home' ? (
-          <section className="section roadmap-section" id="roadmap">
-            <p className="kicker">BUILD ORDER</p>
-            <h2>Prove the hard parts first.</h2>
-            <div className="roadmap-line">
-              <div>
-                <span>Now</span>
-                <strong>Device diagnostics</strong>
-              </div>
-              <div>
-                <span>Next</span>
-                <strong>Streaming text model</strong>
-              </div>
-              <div>
-                <span>Then</span>
-                <strong>Offline model reuse</strong>
-              </div>
-              <div>
-                <span>After</span>
-                <strong>Hugging Face import</strong>
-              </div>
-            </div>
-          </section>
-        ) : null}
       </main>
 
       <footer>

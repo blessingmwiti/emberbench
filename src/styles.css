@@ -2596,50 +2596,6 @@ h2 {
   font-size: 30px;
 }
 
-.roadmap-section h2 {
-  max-width: 600px;
-}
-
-.roadmap-line {
-  margin-top: 55px;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  border-top: 1px solid var(--line);
-}
-
-.roadmap-line div {
-  position: relative;
-  padding: 28px 24px 0 0;
-}
-
-.roadmap-line div::before {
-  position: absolute;
-  top: -5px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--line);
-  content: '';
-}
-
-.roadmap-line div:first-child::before {
-  background: var(--ember);
-  box-shadow: 0 0 12px rgb(255 113 68 / 70%);
-}
-
-.roadmap-line span {
-  display: block;
-  margin-bottom: 8px;
-  color: var(--muted);
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
-  font-size: 10px;
-  text-transform: uppercase;
-}
-
-.roadmap-line strong {
-  font-size: 14px;
-}
-
 footer {
   padding: 35px 0 45px;
   display: flex;
@@ -2791,11 +2747,6 @@ footer span:first-child {
   .workspace-card {
     min-height: 270px;
   }
-
-  .roadmap-line {
-    grid-template-columns: repeat(2, 1fr);
-    row-gap: 30px;
-  }
 }
 
 @media (max-width: 520px) {
@@ -2851,21 +2802,6 @@ footer span:first-child {
 
   .diagnostic-list div:last-child {
     border-bottom: 0;
-  }
-
-  .roadmap-line {
-    grid-template-columns: 1fr;
-    border-top: 0;
-  }
-
-  .roadmap-line div {
-    padding-left: 22px;
-    border-left: 1px solid var(--line);
-  }
-
-  .roadmap-line div::before {
-    top: 34px;
-    left: -5px;
   }
 
   footer {
